@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Pomodoro timer icon">
+  <rect width="128" height="128" rx="28" fill="#08090c"/>
+  <circle cx="64" cy="70" r="36" fill="#ff5d62"/>
+  <path d="M49 36c7 2 12 5 15 11 3-7 9-11 18-13-1 11-9 18-20 19-9-1-14-7-13-17Z" fill="#48d597"/>
+  <path d="M64 44v25l18 11" fill="none" stroke="#12080a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="64" cy="70" r="45" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="6"/>
+</svg>

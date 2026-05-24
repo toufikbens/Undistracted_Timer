@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#08090c">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Pomodoro">
+    <title>Pomodoro</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="assets/app-icon.svg">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="shell" aria-label="Pomodoro timer">
+      <header class="titlebar">
+        <div class="traffic-lights" aria-hidden="true">
+          <span class="light light-close"></span>
+          <span class="light light-minimize"></span>
+          <span class="light light-maximize"></span>
+        </div>
+        <div class="brand">
+          <img class="brand-mark" src="assets/app-icon.svg" alt="" width="34" height="34">
+          <div>
+            <p class="eyebrow">Minimal focus timer</p>
+            <h1>Pomodoro</h1>
+          </div>
+        </div>
+        <p class="status-pill" id="statusText" aria-live="polite">Ready</p>
+      </header>
+
+      <section class="timer-layout">
+        <div class="timer-stage" aria-label="Current timer">
+          <div class="mode-tabs" role="tablist" aria-label="Timer mode">
+            <button class="mode-tab is-active" type="button" role="tab" aria-selected="true" data-mode="focus">Focus</button>
+            <button class="mode-tab" type="button" role="tab" aria-selected="false" data-mode="short">Short break</button>
+            <button class="mode-tab" type="button" role="tab" aria-selected="false" data-mode="long">Long break</button>
+          </div>
+
+          <div class="ring-wrap" aria-live="polite">
+            <svg class="progress-ring" viewBox="0 0 240 240" role="img" aria-labelledby="timerLabel timerTime">
+              <title id="timerLabel">Time remaining</title>
+              <circle class="ring-track" cx="120" cy="120" r="104" pathLength="1"></circle>
+              <circle class="ring-progress" cx="120" cy="120" r="104" pathLength="1"></circle>
+            </svg>
+            <div class="time-readout">
+              <p id="modeLabel">Focus</p>
+              <strong id="timerTime">25:00</strong>
+              <span id="nextLabel">Next: short break</span>
+            </div>
+          </div>
+
+          <div class="controls" aria-label="Timer controls">
+            <button class="control-button primary" id="startPauseButton" type="button">Start</button>
+            <button class="control-button" id="resetButton" type="button">Reset</button>
+            <button class="control-button" id="skipButton" type="button">Skip</button>
+          </div>
+
+          <div class="session-row" aria-label="Focus cycle progress">
+            <span class="cycle-dot is-current"></span>
+            <span class="cycle-dot"></span>
+            <span class="cycle-dot"></span>
+            <span class="cycle-dot"></span>
+          </div>
+        </div>
+
+        <aside class="side-panel" aria-label="Focus details and preferences">
+          <label class="task-field">
+            <span>Current intention</span>
+            <input id="taskInput" type="text" maxlength="64" autocomplete="off" placeholder="One thing to finish">
+          </label>
+
+          <section class="panel" aria-label="Today's focus">
+            <div>
+              <p class="metric-label">Today</p>
+              <strong id="todayMetric">0 focus sessions</strong>
+            </div>
+            <div>
+              <p class="metric-label">Focus time</p>
+              <strong id="minutesMetric">0 min</strong>
+            </div>
+          </section>
+
+          <section class="panel settings" aria-label="Timer settings">
+            <div class="setting-row">
+              <label for="focusMinutes">Focus</label>
+              <input id="focusMinutes" type="number" min="1" max="180" step="1" inputmode="numeric">
+            </div>
+            <div class="setting-row">
+              <label for="shortMinutes">Short break</label>
+              <input id="shortMinutes" type="number" min="1" max="90" step="1" inputmode="numeric">
+            </div>
+            <div class="setting-row">
+              <label for="longMinutes">Long break</label>
+              <input id="longMinutes" type="number" min="1" max="120" step="1" inputmode="numeric">
+            </div>
+            <div class="setting-row">
+              <label for="longEvery">Long break every</label>
+              <input id="longEvery" type="number" min="2" max="12" step="1" inputmode="numeric">
+            </div>
+          </section>
+
+          <section class="panel preferences" aria-label="Preferences">
+            <label class="toggle-row">
+              <span>Auto-start next session</span>
+              <input id="autoStartToggle" type="checkbox">
+            </label>
+            <label class="toggle-row">
+              <span>Completion chime</span>
+              <input id="soundToggle" type="checkbox">
+            </label>
+            <button class="utility-button" id="notifyButton" type="button">Enable notifications</button>
+          </section>
+        </aside>
+      </section>
+    </main>
+
+    <script src="app.js" defer></script>
+  </body>
+</html>
