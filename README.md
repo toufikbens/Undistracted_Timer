@@ -11,3 +11,5 @@ A minimalist dark theme Pomodoro timer that runs in any modern browser.
 - Today's focus session and minute counters
 - Current intention field with local persistence
 - Keyboard shortcuts: Space starts or pauses, R resets, S skips, 1/2/3 switch modes
+
+URL on github pages : https://toufikbens.github.io/Pomodoro_timer/
