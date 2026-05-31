@@ -8,13 +8,21 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Pomodoro">
     <title>Pomodoro</title>
+
+    <!-- App manifest and icons -->
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="assets/app-icon.svg">
+    <link rel="icon" href="favicon.png?v=2" type="image/png" sizes="128x128">
+    <link rel="shortcut icon" href="favicon.png?v=2" type="image/png">
+    <link rel="icon" href="assets/app-icon.svg?v=2" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="favicon.png?v=2">
+
+    <!-- Main stylesheet -->
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
+    <!-- App shell -->
     <main class="shell" aria-label="Pomodoro timer">
+      <!-- Top bar: app identity, theme toggle, and timer status -->
       <header class="titlebar">
         <div class="traffic-lights" aria-hidden="true">
           <span class="light light-close"></span>
@@ -28,10 +36,17 @@
             <h1>Pomodoro</h1>
           </div>
         </div>
-        <p class="status-pill" id="statusText" aria-live="polite">Ready</p>
+        <div class="title-actions">
+          <button class="theme-button" id="themeToggleButton" type="button" aria-label="Switch to light theme">
+            <span id="themeToggleText">Light</span>
+          </button>
+          <p class="status-pill" id="statusText" aria-live="polite">Ready</p>
+        </div>
       </header>
 
+      <!-- Main timer and settings layout -->
       <section class="timer-layout">
+        <!-- Timer stage: modes, countdown ring, controls, and cycle progress -->
         <div class="timer-stage" aria-label="Current timer">
           <div class="mode-tabs" role="tablist" aria-label="Timer mode">
             <button class="mode-tab is-active" type="button" role="tab" aria-selected="true" data-mode="focus">Focus</button>
@@ -66,6 +81,7 @@
           </div>
         </div>
 
+        <!-- Side panel: task, daily stats, timer settings, and preferences -->
         <aside class="side-panel" aria-label="Focus details and preferences">
           <label class="task-field">
             <span>Current intention</span>
@@ -81,8 +97,10 @@
               <p class="metric-label">Focus time</p>
               <strong id="minutesMetric">0 min</strong>
             </div>
+            <button class="utility-button subtle" id="clearStatsButton" type="button">Clear focus stats</button>
           </section>
 
+          <!-- Duration settings -->
           <section class="panel settings" aria-label="Timer settings">
             <div class="setting-row">
               <label for="focusMinutes">Focus</label>
@@ -102,6 +120,7 @@
             </div>
           </section>
 
+          <!-- Behavior preferences -->
           <section class="panel preferences" aria-label="Preferences">
             <label class="toggle-row">
               <span>Auto-start next session</span>

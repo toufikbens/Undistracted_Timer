@@ -1,3 +1,4 @@
+/* Theme variables */
 :root {
   color-scheme: dark;
   --bg: #08090c;
@@ -14,11 +15,58 @@
   --accent-border: rgba(255, 93, 98, 0.46);
   --good: #48d597;
   --warn: #ffd166;
+  --page-bg: linear-gradient(135deg, #08090c 0%, #11141b 52%, #08090c 100%);
+  --shell-bg: rgba(16, 18, 23, 0.86);
+  --titlebar-bg: rgba(255, 255, 255, 0.015);
+  --side-bg: rgba(255, 255, 255, 0.025);
+  --mode-bg: rgba(255, 255, 255, 0.035);
+  --control-bg: rgba(255, 255, 255, 0.055);
+  --control-hover-bg: rgba(255, 255, 255, 0.08);
+  --pill-bg: rgba(255, 255, 255, 0.04);
+  --input-bg: rgba(0, 0, 0, 0.22);
+  --panel-bg: rgba(10, 11, 15, 0.36);
+  --ring-track: rgba(255, 255, 255, 0.08);
+  --dot-bg: rgba(255, 255, 255, 0.14);
+  --placeholder: #687284;
+  --toggle-bg: rgba(255, 255, 255, 0.1);
+  --primary-text: #12080a;
+  --logo-shadow: 0 10px 20px rgba(0, 0, 0, 0.24);
   --radius: 8px;
   --shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
   --progress: 0;
 }
 
+/* Light theme overrides */
+html[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f4f6fb;
+  --surface: #ffffff;
+  --surface-strong: #f8f9fc;
+  --surface-soft: #eef2f8;
+  --border: rgba(17, 19, 26, 0.1);
+  --border-strong: rgba(17, 19, 26, 0.18);
+  --text: #11131a;
+  --muted: #5d6674;
+  --subtle: #778191;
+  --page-bg: linear-gradient(135deg, #f7f8fb 0%, #e9eef7 52%, #fbfcff 100%);
+  --shell-bg: rgba(255, 255, 255, 0.9);
+  --titlebar-bg: rgba(255, 255, 255, 0.44);
+  --side-bg: rgba(255, 255, 255, 0.38);
+  --mode-bg: rgba(17, 19, 26, 0.045);
+  --control-bg: rgba(17, 19, 26, 0.055);
+  --control-hover-bg: rgba(17, 19, 26, 0.085);
+  --pill-bg: rgba(17, 19, 26, 0.045);
+  --input-bg: rgba(255, 255, 255, 0.72);
+  --panel-bg: rgba(255, 255, 255, 0.58);
+  --ring-track: rgba(17, 19, 26, 0.1);
+  --dot-bg: rgba(17, 19, 26, 0.18);
+  --placeholder: #8a93a3;
+  --toggle-bg: rgba(17, 19, 26, 0.12);
+  --logo-shadow: 0 10px 20px rgba(17, 19, 26, 0.18);
+  --shadow: 0 28px 70px rgba(42, 51, 68, 0.18);
+}
+
+/* Base elements */
 * {
   box-sizing: border-box;
 }
@@ -36,7 +84,7 @@ body {
   display: grid;
   place-items: center;
   padding: max(18px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
-  background: linear-gradient(135deg, #08090c 0%, #11141b 52%, #08090c 100%);
+  background: var(--page-bg);
   color: var(--text);
   font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
 }
@@ -57,18 +105,20 @@ input:focus-visible {
   outline-offset: 3px;
 }
 
+/* App shell */
 .shell {
   width: min(1080px, 100%);
   min-height: min(720px, calc(100vh - 36px));
   border: 1px solid var(--border);
   border-radius: 14px;
-  background: rgba(16, 18, 23, 0.86);
+  background: var(--shell-bg);
   box-shadow: var(--shadow);
   -webkit-backdrop-filter: blur(28px) saturate(130%);
   backdrop-filter: blur(28px) saturate(130%);
   overflow: hidden;
 }
 
+/* Title bar */
 .titlebar {
   min-height: 82px;
   display: grid;
@@ -77,9 +127,10 @@ input:focus-visible {
   align-items: center;
   padding: 18px 22px;
   border-bottom: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.015);
+  background: var(--titlebar-bg);
 }
 
+/* Decorative macOS-style window controls */
 .traffic-lights {
   display: flex;
   gap: 8px;
@@ -105,6 +156,7 @@ input:focus-visible {
   background: #28c840;
 }
 
+/* App identity */
 .brand {
   display: flex;
   gap: 12px;
@@ -116,7 +168,7 @@ input:focus-visible {
   width: 34px;
   height: 34px;
   flex: 0 0 auto;
-  filter: drop-shadow(0 10px 20px rgba(255, 93, 98, 0.18));
+  filter: drop-shadow(var(--logo-shadow));
 }
 
 .eyebrow,
@@ -136,6 +188,7 @@ h1 {
   font-weight: 680;
 }
 
+/* Header actions */
 .status-pill {
   margin: 0;
   justify-self: end;
@@ -143,13 +196,44 @@ h1 {
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--pill-bg);
   color: var(--muted);
   font-size: 0.82rem;
   line-height: 1.2;
   text-align: center;
 }
 
+.title-actions {
+  display: flex;
+  align-items: center;
+  justify-self: end;
+  gap: 10px;
+  min-width: 0;
+}
+
+.theme-button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--control-bg);
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 650;
+  transition: transform 150ms ease, background 150ms ease, border-color 150ms ease;
+}
+
+.theme-button:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-strong);
+  background: var(--control-hover-bg);
+}
+
+.theme-button:active {
+  transform: translateY(0);
+}
+
+/* Main layout */
 .timer-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 336px;
@@ -165,6 +249,7 @@ h1 {
   padding: 32px clamp(22px, 5vw, 54px);
 }
 
+/* Mode tabs */
 .mode-tabs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -172,7 +257,7 @@ h1 {
   padding: 4px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.035);
+  background: var(--mode-bg);
 }
 
 .mode-tab {
@@ -191,6 +276,7 @@ h1 {
   box-shadow: inset 0 0 0 1px var(--border);
 }
 
+/* Timer ring */
 .ring-wrap {
   position: relative;
   width: min(410px, 82vw);
@@ -215,7 +301,7 @@ h1 {
 }
 
 .ring-track {
-  stroke: rgba(255, 255, 255, 0.08);
+  stroke: var(--ring-track);
 }
 
 .ring-progress {
@@ -257,6 +343,7 @@ h1 {
   font-size: 0.92rem;
 }
 
+/* Timer controls and cycle dots */
 .controls {
   display: grid;
   grid-template-columns: minmax(118px, 1fr) minmax(96px, 0.7fr) minmax(96px, 0.7fr);
@@ -269,7 +356,7 @@ h1 {
   min-height: 46px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.055);
+  background: var(--control-bg);
   color: var(--text);
   font-weight: 650;
   transition: transform 150ms ease, background 150ms ease, border-color 150ms ease;
@@ -279,7 +366,7 @@ h1 {
 .utility-button:hover {
   transform: translateY(-1px);
   border-color: var(--border-strong);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--control-hover-bg);
 }
 
 .control-button:active,
@@ -290,7 +377,7 @@ h1 {
 .control-button.primary {
   border-color: var(--accent-border);
   background: var(--accent);
-  color: #12080a;
+  color: var(--primary-text);
 }
 
 .session-row {
@@ -305,7 +392,7 @@ h1 {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--dot-bg);
   transition: transform 160ms ease, background 160ms ease;
 }
 
@@ -318,6 +405,7 @@ h1 {
   transform: scale(1.2);
 }
 
+/* Side panel */
 .side-panel {
   display: grid;
   align-content: start;
@@ -325,7 +413,7 @@ h1 {
   min-width: 0;
   padding: 28px 22px;
   border-left: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.025);
+  background: var(--side-bg);
 }
 
 .task-field {
@@ -333,6 +421,7 @@ h1 {
   gap: 8px;
 }
 
+/* Form fields */
 .task-field span,
 .setting-row label,
 .toggle-row span {
@@ -347,7 +436,7 @@ h1 {
   min-height: 44px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: rgba(0, 0, 0, 0.22);
+  background: var(--input-bg);
   color: var(--text);
 }
 
@@ -356,16 +445,17 @@ h1 {
 }
 
 .task-field input::placeholder {
-  color: #687284;
+  color: var(--placeholder);
 }
 
+/* Panels and settings */
 .panel {
   display: grid;
   gap: 14px;
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: rgba(10, 11, 15, 0.36);
+  background: var(--panel-bg);
 }
 
 .panel strong {
@@ -392,6 +482,7 @@ h1 {
   font-variant-numeric: tabular-nums;
 }
 
+/* Toggle switches */
 .preferences {
   gap: 12px;
 }
@@ -412,7 +503,7 @@ h1 {
   flex: 0 0 auto;
   border: 1px solid var(--border-strong);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--toggle-bg);
   transition: background 160ms ease, border-color 160ms ease;
 }
 
@@ -437,10 +528,34 @@ h1 {
   transform: translateX(18px);
 }
 
+/* Utility buttons */
 .utility-button {
   width: 100%;
 }
 
+.utility-button.subtle {
+  min-height: 42px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.utility-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.utility-button:disabled:hover {
+  transform: none;
+  border-color: var(--border);
+  background: var(--control-bg);
+}
+
+.utility-button.subtle:disabled:hover {
+  background: transparent;
+}
+
+/* Mode and running states */
 body[data-mode="short"] {
   --accent: #48d597;
   --accent-soft: rgba(72, 213, 151, 0.16);
@@ -463,6 +578,7 @@ body.is-running .status-pill {
   border-color: var(--accent-border);
 }
 
+/* Tablet and narrow desktop layout */
 @media (max-width: 860px) {
   body {
     align-items: start;
@@ -501,6 +617,7 @@ body.is-running .status-pill {
   }
 }
 
+/* Phone layout */
 @media (max-width: 520px) {
   .titlebar {
     gap: 12px;
@@ -539,6 +656,7 @@ body.is-running .status-pill {
   }
 }
 
+/* Respect users who prefer less animation */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

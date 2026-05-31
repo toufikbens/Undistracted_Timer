@@ -1,7 +1,12 @@
+// Wrap the app in a function so its variables do not leak into window.
 (function () {
   "use strict";
 
+  // One localStorage record holds timer state, preferences, and daily stats.
   const STORAGE_KEY = "minimal-pomodoro-state-v1";
+
+  // Static information for each timer mode. The durationKey tells the app
+  // which setting controls the length of that mode.
   const modes = {
     focus: {
       label: "Focus",
@@ -26,6 +31,8 @@
     }
   };
 
+  // The default state is also the shape of the saved data we expect.
+  // Durations are stored in seconds; settings are stored in minutes.
   const defaults = {
     mode: "focus",
     remaining: 25 * 60,
@@ -42,17 +49,20 @@
       shortMinutes: 5,
       longMinutes: 15,
       longEvery: 4,
-      autoStart: false,
+      autoStart: true,
       sound: true,
-      notifications: false
+      notifications: false,
+      theme: "dark"
     }
   };
 
+  // Runtime state that changes while the page is open.
   let state = loadState();
   let tickHandle = null;
   let audioContext = null;
   let wakeLock = null;
 
+  // Cache DOM lookups once, then reuse these references throughout the app.
   const elements = {
     body: document.body,
     modeTabs: Array.from(document.querySelectorAll(".mode-tab")),
@@ -60,6 +70,8 @@
     timerTime: document.getElementById("timerTime"),
     nextLabel: document.getElementById("nextLabel"),
     statusText: document.getElementById("statusText"),
+    themeToggleButton: document.getElementById("themeToggleButton"),
+    themeToggleText: document.getElementById("themeToggleText"),
     startPauseButton: document.getElementById("startPauseButton"),
     resetButton: document.getElementById("resetButton"),
     skipButton: document.getElementById("skipButton"),
@@ -67,26 +79,31 @@
     taskInput: document.getElementById("taskInput"),
     todayMetric: document.getElementById("todayMetric"),
     minutesMetric: document.getElementById("minutesMetric"),
+    clearStatsButton: document.getElementById("clearStatsButton"),
     focusMinutes: document.getElementById("focusMinutes"),
     shortMinutes: document.getElementById("shortMinutes"),
     longMinutes: document.getElementById("longMinutes"),
     longEvery: document.getElementById("longEvery"),
     autoStartToggle: document.getElementById("autoStartToggle"),
     soundToggle: document.getElementById("soundToggle"),
-    notifyButton: document.getElementById("notifyButton")
+    notifyButton: document.getElementById("notifyButton"),
+    themeColorMeta: document.querySelector('meta[name="theme-color"]')
   };
 
   initialise();
 
+  // Runs once after the deferred script loads and prepares the first render.
   function initialise() {
     rollTodayIfNeeded();
     restoreRunningTimer();
+    applyTheme();
     syncInputs();
     bindEvents();
     render();
     setTicking(state.isRunning);
   }
 
+  // Connects UI controls, keyboard shortcuts, and browser events to app logic.
   function bindEvents() {
     elements.startPauseButton.addEventListener("click", toggleTimer);
     elements.resetButton.addEventListener("click", resetTimer);
@@ -122,6 +139,8 @@
     });
 
     elements.notifyButton.addEventListener("click", requestNotifications);
+    elements.clearStatsButton.addEventListener("click", clearFocusStats);
+    elements.themeToggleButton.addEventListener("click", toggleTheme);
 
     document.addEventListener("visibilitychange", () => {
       if (state.isRunning) {
@@ -161,6 +180,8 @@
     });
   }
 
+  // Reads saved state and merges it with defaults so newly added settings still
+  // exist for users who already had older saved data.
   function loadState() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
@@ -188,10 +209,13 @@
     }
   }
 
+  // Make a deep copy so nested objects like settings are not shared by reference.
   function cloneDefaults() {
     return JSON.parse(JSON.stringify(defaults));
   }
 
+  // localStorage can be edited or contain old/broken values, so clamp anything
+  // user-facing before the app uses it.
   function normaliseLoadedState(nextState) {
     nextState.settings.focusMinutes = boundedInteger(nextState.settings.focusMinutes, 1, 180, defaults.settings.focusMinutes);
     nextState.settings.shortMinutes = boundedInteger(nextState.settings.shortMinutes, 1, 90, defaults.settings.shortMinutes);
@@ -200,6 +224,7 @@
     nextState.completedInCycle = boundedInteger(nextState.completedInCycle, 0, nextState.settings.longEvery - 1, 0);
     nextState.todayFocusSessions = boundedInteger(nextState.todayFocusSessions, 0, 10000, 0);
     nextState.todayFocusMinutes = boundedInteger(nextState.todayFocusMinutes, 0, 100000, 0);
+    nextState.settings.theme = nextState.settings.theme === "light" ? "light" : "dark";
 
     if (!Number.isFinite(Number(nextState.currentDuration)) || Number(nextState.currentDuration) <= 0) {
       nextState.currentDuration = durationFor(nextState.mode, nextState.settings);
@@ -210,6 +235,7 @@
     }
   }
 
+  // Converts any input to a whole number within an allowed range.
   function boundedInteger(value, min, max, fallback) {
     const number = Math.round(Number(value));
     if (!Number.isFinite(number)) {
@@ -218,10 +244,12 @@
     return Math.min(max, Math.max(min, number));
   }
 
+  // Persist the full app state after each meaningful change.
   function saveState() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }
 
+  // Daily stats reset automatically when the calendar day changes.
   function rollTodayIfNeeded() {
     const currentKey = todayKey();
     if (state.todayKey !== currentKey) {
@@ -232,6 +260,8 @@
     }
   }
 
+  // Rebuild a running timer after reload by comparing the saved end time with
+  // the current clock. This keeps timing accurate even if the tab was closed.
   function restoreRunningTimer() {
     if (!state.isRunning || !state.endAt) {
       state.isRunning = false;
@@ -253,6 +283,7 @@
     state.currentDuration = state.currentDuration || modeDuration(state.mode);
   }
 
+  // Push saved state into form controls before the user starts interacting.
   function syncInputs() {
     elements.focusMinutes.value = state.settings.focusMinutes;
     elements.shortMinutes.value = state.settings.shortMinutes;
@@ -262,8 +293,10 @@
     elements.soundToggle.checked = state.settings.sound;
     elements.taskInput.value = state.task || "";
     updateNotificationButton();
+    updateThemeButton();
   }
 
+  // The main Start/Pause button delegates to the right timer action.
   function toggleTimer() {
     if (state.isRunning) {
       pauseTimer();
@@ -272,6 +305,7 @@
     }
   }
 
+  // Starts the current mode and stores an absolute end timestamp for accuracy.
   function startTimer() {
     if (state.remaining <= 0) {
       state.currentDuration = modeDuration(state.mode);
@@ -288,6 +322,7 @@
     render();
   }
 
+  // Pauses by converting the absolute end time back into remaining seconds.
   function pauseTimer() {
     state.remaining = secondsRemaining();
     state.isRunning = false;
@@ -298,6 +333,7 @@
     render();
   }
 
+  // Resets the current mode to its configured duration without changing modes.
   function resetTimer() {
     state.isRunning = false;
     state.endAt = null;
@@ -309,6 +345,7 @@
     render();
   }
 
+  // Manual mode changes stop the timer and load that mode's full duration.
   function switchMode(nextMode) {
     if (!modes[nextMode] || nextMode === state.mode) {
       return;
@@ -325,6 +362,8 @@
     render();
   }
 
+  // Shared completion flow for real timer endings and manual skips.
+  // counted controls whether focus stats increase; automatic controls alerts.
   function finishMode({ counted, automatic }) {
     const completedMode = state.mode;
     const shouldCountFocus = counted && completedMode === "focus";
@@ -356,6 +395,7 @@
     }
   }
 
+  // Decide whether the next session should be focus, short break, or long break.
   function getNextMode(completedMode, countedFocus) {
     if (completedMode !== "focus") {
       return "focus";
@@ -368,6 +408,8 @@
     return state.completedInCycle === 0 ? "long" : "short";
   }
 
+  // setInterval only drives UI updates. The real remaining time is calculated
+  // from Date.now(), which is more reliable when a browser throttles timers.
   function setTicking(shouldTick) {
     window.clearInterval(tickHandle);
     tickHandle = null;
@@ -389,6 +431,7 @@
     }, 250);
   }
 
+  // Calculate remaining time from the saved end timestamp when running.
   function secondsRemaining() {
     if (!state.isRunning || !state.endAt) {
       return clampRemaining(state.remaining);
@@ -397,14 +440,17 @@
     return Math.max(0, Math.ceil((state.endAt - Date.now()) / 1000));
   }
 
+  // Look up the duration for a mode using the current settings.
   function modeDuration(mode) {
     return durationFor(mode, state.settings);
   }
 
+  // Convert a mode's minutes setting into seconds.
   function durationFor(mode, settings) {
     return Math.round(Number(settings[modes[mode].durationKey]) * 60);
   }
 
+  // Keep remaining seconds usable if loaded state or form input is invalid.
   function clampRemaining(value) {
     const number = Number(value);
     if (!Number.isFinite(number) || number < 0) {
@@ -413,6 +459,7 @@
     return Math.round(number);
   }
 
+  // Validate a numeric setting, save it, and update the visible timer if needed.
   function updateNumberSetting(input) {
     const min = Number(input.min || 1);
     const max = Number(input.max || 180);
@@ -433,6 +480,46 @@
     render();
   }
 
+  // Clear only today's focus counters; task, timer, and preferences stay intact.
+  function clearFocusStats() {
+    rollTodayIfNeeded();
+    state.todayFocusSessions = 0;
+    state.todayFocusMinutes = 0;
+    saveState();
+    render();
+    setTransientStatus("Stats cleared");
+  }
+
+  // Flip between dark and light themes, then persist the choice.
+  function toggleTheme() {
+    state.settings.theme = state.settings.theme === "light" ? "dark" : "light";
+    applyTheme();
+    updateThemeButton();
+    saveState();
+  }
+
+  // Apply the theme to the document so CSS variables can update the whole UI.
+  function applyTheme() {
+    const theme = state.settings.theme === "light" ? "light" : "dark";
+    state.settings.theme = theme;
+    document.documentElement.dataset.theme = theme;
+
+    if (elements.themeColorMeta) {
+      elements.themeColorMeta.setAttribute("content", theme === "light" ? "#f4f6fb" : "#08090c");
+    }
+  }
+
+  // The button label shows the theme the user can switch to next.
+  function updateThemeButton() {
+    const isLight = state.settings.theme === "light";
+    const nextTheme = isLight ? "dark" : "light";
+    const label = `Switch to ${nextTheme} theme`;
+    elements.themeToggleText.textContent = isLight ? "Dark" : "Light";
+    elements.themeToggleButton.setAttribute("aria-label", label);
+    elements.themeToggleButton.title = label;
+  }
+
+  // Ask the browser for notification permission and store the user's choice.
   async function requestNotifications() {
     if (!("Notification" in window)) {
       setTransientStatus("Unsupported");
@@ -456,6 +543,7 @@
     }
   }
 
+  // Keep the notification button honest about browser support and permission.
   function updateNotificationButton() {
     if (!("Notification" in window)) {
       elements.notifyButton.textContent = "Notifications unavailable";
@@ -472,11 +560,12 @@
     }
   }
 
+  // Runs the completion feedback: sound first, then optional browser notification.
   function announceCompletion(completedMode) {
     const mode = modes[completedMode];
 
     if (state.settings.sound) {
-      playChime();
+      playChime(completedMode);
     }
 
     if (
@@ -493,6 +582,8 @@
     }
   }
 
+  // Browsers only allow audio after user interaction, so create the AudioContext
+  // when the user starts the timer instead of waiting until the session ends.
   function unlockAudio() {
     if (!state.settings.sound || audioContext) {
       return;
@@ -509,29 +600,53 @@
     }
   }
 
-  function playChime() {
+  // Play different note patterns for finished focus sessions and finished breaks.
+  function playChime(completedMode) {
     unlockAudio();
     if (!audioContext) {
       return;
     }
 
     const now = audioContext.currentTime;
-    const gain = audioContext.createGain();
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.18, now + 0.015);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.75);
-    gain.connect(audioContext.destination);
+    const pattern = completedMode === "focus"
+      ? {
+          type: "triangle",
+          volume: 0.26,
+          notes: [
+            { frequency: 523.25, time: 0, length: 0.22 },
+            { frequency: 659.25, time: 0.16, length: 0.22 },
+            { frequency: 783.99, time: 0.32, length: 0.28 },
+            { frequency: 1046.5, time: 0.58, length: 0.36 }
+          ]
+        }
+      : {
+          type: "square",
+          volume: 0.18,
+          notes: [
+            { frequency: 880, time: 0, length: 0.15 },
+            { frequency: 880, time: 0.22, length: 0.15 },
+            { frequency: 659.25, time: 0.48, length: 0.28 }
+          ]
+        };
 
-    [523.25, 659.25, 783.99].forEach((frequency, index) => {
+    // Each note gets its own gain envelope so the sound is clear but not clipped.
+    pattern.notes.forEach(({ frequency, time, length }) => {
+      const start = now + time;
       const oscillator = audioContext.createOscillator();
-      oscillator.type = "sine";
-      oscillator.frequency.setValueAtTime(frequency, now + index * 0.11);
+      const gain = audioContext.createGain();
+      oscillator.type = pattern.type;
+      oscillator.frequency.setValueAtTime(frequency, start);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(pattern.volume, start + 0.018);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + length);
       oscillator.connect(gain);
-      oscillator.start(now + index * 0.11);
-      oscillator.stop(now + 0.72);
+      gain.connect(audioContext.destination);
+      oscillator.start(start);
+      oscillator.stop(start + length + 0.04);
     });
   }
 
+  // Ask supported browsers to keep the screen awake while the timer is running.
   async function requestWakeLock() {
     if (!("wakeLock" in navigator)) {
       return;
@@ -547,6 +662,7 @@
     }
   }
 
+  // Release the wake lock whenever the timer stops.
   async function releaseWakeLock() {
     if (!wakeLock) {
       return;
@@ -559,11 +675,13 @@
     }
   }
 
+  // Show a short status message, then return to the normal Ready/Running label.
   function setTransientStatus(message) {
     elements.statusText.textContent = message;
     window.setTimeout(renderStatus, 1400);
   }
 
+  // The single render function keeps the DOM in sync with state.
   function render() {
     rollTodayIfNeeded();
     const remaining = secondsRemaining();
@@ -596,9 +714,11 @@
 
     elements.todayMetric.textContent = pluralise(state.todayFocusSessions, "focus session");
     elements.minutesMetric.textContent = `${state.todayFocusMinutes} min`;
+    elements.clearStatsButton.disabled = state.todayFocusSessions === 0 && state.todayFocusMinutes === 0;
     renderStatus();
   }
 
+  // Rebuild cycle dots only when the long-break cadence changes.
   function renderCycleDots() {
     const needed = state.settings.longEvery;
     if (elements.cycleRow.children.length === needed) {
@@ -614,10 +734,12 @@
     elements.cycleRow.replaceChildren(fragment);
   }
 
+  // Normal status text depends only on whether the timer is active.
   function renderStatus() {
     elements.statusText.textContent = state.isRunning ? "Running" : "Ready";
   }
 
+  // Preview the mode that will come after the current one.
   function nextModeLabel() {
     if (state.mode !== "focus") {
       return "focus";
@@ -626,16 +748,19 @@
     return state.completedInCycle === state.settings.longEvery - 1 ? "long break" : "short break";
   }
 
+  // Format seconds as MM:SS for the timer and document title.
   function formatTime(totalSeconds) {
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
     return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
   }
 
+  // Small helper for labels like "1 focus session" vs "2 focus sessions".
   function pluralise(count, noun) {
     return `${count} ${noun}${count === 1 ? "" : "s"}`;
   }
 
+  // YYYY-MM-DD key used to decide when daily stats should reset.
   function todayKey() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
