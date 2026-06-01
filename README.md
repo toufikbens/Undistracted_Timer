@@ -2,6 +2,10 @@
 
 A minimalist dark theme interval timer that runs in any modern browser.
 
+## Preview
+
+![Undistracted Timer homepage screenshot](assets/undistracted-timer.png)
+
 ## Features
 
 - Focus, short break, and long break modes
@@ -12,4 +16,7 @@ A minimalist dark theme interval timer that runs in any modern browser.
 - Current intention field with local persistence
 - Keyboard shortcuts: Space starts or pauses, R resets, S skips, 1/2/3 switch modes
 
-Planned production URL: https://timer.undistracted.dev/
+
+## Live Site
+
+https://timer.undistracted.dev/
