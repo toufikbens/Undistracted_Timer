@@ -3,7 +3,7 @@
   "use strict";
 
   // One localStorage record holds timer state, preferences, and daily stats.
-  const STORAGE_KEY = "minimal-pomodoro-state-v1";
+  const STORAGE_KEY = "undistracted-timer-state-v1";
 
   // Static information for each timer mode. The durationKey tells the app
   // which setting controls the length of that mode.

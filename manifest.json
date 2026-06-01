@@ -1,14 +1,14 @@
 {
-  "name": "Pomodoro",
-  "short_name": "Pomodoro",
-  "description": "A minimalist dark theme Pomodoro timer.",
+  "name": "Undistracted Timer",
+  "short_name": "Timer",
+  "description": "A quiet interval timer for focused work sessions and intentional breaks.",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#08090c",
   "theme_color": "#08090c",
   "icons": [
     {
-      "src": "favicon.png",
+      "src": "assets/favicon.png",
       "sizes": "128x128",
       "type": "image/png",
       "purpose": "any maskable"

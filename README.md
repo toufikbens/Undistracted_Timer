@@ -1,6 +1,6 @@
-# Minimalist Pomodoro timer
+# Undistracted Timer
 
-A minimalist dark theme Pomodoro timer that runs in any modern browser.
+A minimalist dark theme interval timer that runs in any modern browser.
 
 ## Features
 
@@ -12,4 +12,4 @@ A minimalist dark theme Pomodoro timer that runs in any modern browser.
 - Current intention field with local persistence
 - Keyboard shortcuts: Space starts or pauses, R resets, S skips, 1/2/3 switch modes
 
-URL on github pages : https://toufikbens.github.io/Pomodoro_timer/
+Planned production URL: https://timer.undistracted.dev/
