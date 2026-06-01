@@ -411,7 +411,7 @@ h1 {
   align-content: start;
   gap: 14px;
   min-width: 0;
-  padding: 28px 22px;
+  padding: 16px 22px;
   border-left: 1px solid var(--border);
   background: var(--side-bg);
 }
