@@ -81,12 +81,15 @@
           </div>
         </div>
 
-        <!-- Side panel: task, daily stats, timer settings, and preferences -->
+        <!-- Side panel: Ambient Sounds, daily stats, timer settings, and preferences -->
         <aside class="side-panel" aria-label="Focus details and preferences">
-          <label class="task-field">
-            <span>Current intention</span>
-            <input id="taskInput" type="text" maxlength="64" autocomplete="off" placeholder="One thing to finish">
-          </label>
+          <section class="ambient-summary" aria-label="Ambient Sounds">
+            <div>
+              <span>Ambient Sounds</span>
+              <strong id="ambientLabel">Off</strong>
+            </div>
+            <button class="utility-button ambient-manage" id="ambientManageButton" type="button">Manage</button>
+          </section>
 
           <section class="panel" aria-label="Today's focus">
             <div>
@@ -135,6 +138,33 @@
         </aside>
       </section>
     </main>
+
+    <div class="ambient-overlay" id="ambientOverlay" hidden>
+      <section class="ambient-window" role="dialog" aria-modal="true" aria-labelledby="ambientDialogTitle">
+        <header class="ambient-window-header">
+          <div>
+            <p class="metric-label">Ambient Sounds</p>
+            <h2 id="ambientDialogTitle">Focus and calm</h2>
+          </div>
+          <button class="utility-button ambient-close" id="ambientCloseButton" type="button">Close</button>
+        </header>
+
+        <div class="ambient-tabs" role="tablist" aria-label="Ambient Sounds category">
+          <button class="ambient-tab is-active" id="ambientFocusTab" type="button" role="tab" aria-selected="true" data-category="focus">Focus</button>
+          <button class="ambient-tab" id="ambientCalmTab" type="button" role="tab" aria-selected="false" data-category="calm">Calm</button>
+        </div>
+
+        <div class="ambient-library" id="ambientLibrary" role="radiogroup" aria-label="Ambient Sounds"></div>
+
+        <div class="ambient-window-footer">
+          <label class="volume-row">
+            <span>Volume <strong id="ambientVolumeValue">42%</strong></span>
+            <input id="ambientVolume" type="range" min="0" max="100" step="1" value="42">
+          </label>
+          <button class="utility-button ambient-toggle" id="ambientToggleButton" type="button" aria-pressed="false">Play</button>
+        </div>
+      </section>
+    </div>
 
     <script src="app.js" defer></script>
   </body>

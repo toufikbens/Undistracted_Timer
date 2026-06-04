@@ -31,6 +31,35 @@
     }
   };
 
+  const ambientCategories = {
+    focus: {
+      label: "Focus"
+    },
+    calm: {
+      label: "Calm"
+    }
+  };
+
+  const ambientSounds = {
+    off: {
+      label: "Off",
+      tone: "Silence",
+      categories: ["focus", "calm"]
+    },
+    lightRain: {
+      label: "Light rain",
+      tone: "Soft rain",
+      categories: ["focus", "calm"],
+      src: "assets/Light rain 1.mp3"
+    },
+    heavyRain: {
+      label: "Heavy rain",
+      tone: "Dense rain",
+      categories: ["focus"],
+      src: "assets/Heavy rain 1.mp3"
+    }
+  };
+
   // The default state is also the shape of the saved data we expect.
   // Durations are stored in seconds; settings are stored in minutes.
   const defaults = {
@@ -43,7 +72,6 @@
     todayKey: todayKey(),
     todayFocusSessions: 0,
     todayFocusMinutes: 0,
-    task: "",
     settings: {
       focusMinutes: 25,
       shortMinutes: 5,
@@ -52,15 +80,31 @@
       autoStart: true,
       sound: true,
       notifications: false,
-      theme: "dark"
+      theme: "dark",
+      ambientSound: "off",
+      ambientVolume: 42
     }
   };
+
+  const AMBIENT_CROSSFADE_SECONDS = 2.4;
 
   // Runtime state that changes while the page is open.
   let state = loadState();
   let tickHandle = null;
   let audioContext = null;
   let wakeLock = null;
+  let activeAmbientCategory = "focus";
+  let lastAmbientTrigger = null;
+  let ambientState = {
+    soundKey: "off",
+    players: [],
+    activeIndex: 0,
+    loopHandle: null,
+    fadeHandle: null,
+    isPlaying: false,
+    isPending: false,
+    isCrossfading: false
+  };
 
   // Cache DOM lookups once, then reuse these references throughout the app.
   const elements = {
@@ -76,7 +120,6 @@
     resetButton: document.getElementById("resetButton"),
     skipButton: document.getElementById("skipButton"),
     cycleRow: document.querySelector(".session-row"),
-    taskInput: document.getElementById("taskInput"),
     todayMetric: document.getElementById("todayMetric"),
     minutesMetric: document.getElementById("minutesMetric"),
     clearStatsButton: document.getElementById("clearStatsButton"),
@@ -86,6 +129,15 @@
     longEvery: document.getElementById("longEvery"),
     autoStartToggle: document.getElementById("autoStartToggle"),
     soundToggle: document.getElementById("soundToggle"),
+    ambientLabel: document.getElementById("ambientLabel"),
+    ambientManageButton: document.getElementById("ambientManageButton"),
+    ambientOverlay: document.getElementById("ambientOverlay"),
+    ambientCloseButton: document.getElementById("ambientCloseButton"),
+    ambientCategoryTabs: Array.from(document.querySelectorAll(".ambient-tab")),
+    ambientLibrary: document.getElementById("ambientLibrary"),
+    ambientToggleButton: document.getElementById("ambientToggleButton"),
+    ambientVolume: document.getElementById("ambientVolume"),
+    ambientVolumeValue: document.getElementById("ambientVolumeValue"),
     notifyButton: document.getElementById("notifyButton"),
     themeColorMeta: document.querySelector('meta[name="theme-color"]')
   };
@@ -113,11 +165,6 @@
       button.addEventListener("click", () => switchMode(button.dataset.mode));
     });
 
-    elements.taskInput.addEventListener("input", () => {
-      state.task = elements.taskInput.value.trim();
-      saveState();
-    });
-
     [
       elements.focusMinutes,
       elements.shortMinutes,
@@ -138,6 +185,19 @@
       saveState();
     });
 
+    elements.ambientManageButton.addEventListener("click", openAmbientDialog);
+    elements.ambientCloseButton.addEventListener("click", closeAmbientDialog);
+    elements.ambientOverlay.addEventListener("click", (event) => {
+      if (event.target === elements.ambientOverlay) {
+        closeAmbientDialog();
+      }
+    });
+    elements.ambientCategoryTabs.forEach((button) => {
+      button.addEventListener("click", () => switchAmbientCategory(button.dataset.category));
+    });
+    elements.ambientToggleButton.addEventListener("click", toggleAmbientPlayback);
+    elements.ambientVolume.addEventListener("input", updateAmbientVolume);
+
     elements.notifyButton.addEventListener("click", requestNotifications);
     elements.clearStatsButton.addEventListener("click", clearFocusStats);
     elements.themeToggleButton.addEventListener("click", toggleTheme);
@@ -149,6 +209,11 @@
     });
 
     document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !elements.ambientOverlay.hidden) {
+        closeAmbientDialog();
+        return;
+      }
+
       const tagName = event.target && event.target.tagName;
       const isTyping = tagName === "INPUT" || tagName === "TEXTAREA";
 
@@ -225,6 +290,10 @@
     nextState.todayFocusSessions = boundedInteger(nextState.todayFocusSessions, 0, 10000, 0);
     nextState.todayFocusMinutes = boundedInteger(nextState.todayFocusMinutes, 0, 100000, 0);
     nextState.settings.theme = nextState.settings.theme === "light" ? "light" : "dark";
+    nextState.settings.ambientSound = ambientSounds[nextState.settings.ambientSound]
+      ? nextState.settings.ambientSound
+      : defaults.settings.ambientSound;
+    nextState.settings.ambientVolume = boundedInteger(nextState.settings.ambientVolume, 0, 100, defaults.settings.ambientVolume);
 
     if (!Number.isFinite(Number(nextState.currentDuration)) || Number(nextState.currentDuration) <= 0) {
       nextState.currentDuration = durationFor(nextState.mode, nextState.settings);
@@ -291,7 +360,8 @@
     elements.longEvery.value = state.settings.longEvery;
     elements.autoStartToggle.checked = state.settings.autoStart;
     elements.soundToggle.checked = state.settings.sound;
-    elements.taskInput.value = state.task || "";
+    elements.ambientVolume.value = state.settings.ambientVolume;
+    elements.ambientVolumeValue.textContent = `${state.settings.ambientVolume}%`;
     updateNotificationButton();
     updateThemeButton();
   }
@@ -314,6 +384,7 @@
 
     state.currentDuration = state.currentDuration || modeDuration(state.mode);
     unlockAudio();
+    startAmbientSound();
     state.isRunning = true;
     state.endAt = Date.now() + state.remaining * 1000;
     setTicking(true);
@@ -480,7 +551,7 @@
     render();
   }
 
-  // Clear only today's focus counters; task, timer, and preferences stay intact.
+  // Clear only today's focus counters; timer and preferences stay intact.
   function clearFocusStats() {
     rollTodayIfNeeded();
     state.todayFocusSessions = 0;
@@ -488,6 +559,257 @@
     saveState();
     render();
     setTransientStatus("Stats cleared");
+  }
+
+  function openAmbientDialog() {
+    activeAmbientCategory = categoryForSound(state.settings.ambientSound);
+    lastAmbientTrigger = document.activeElement;
+    elements.ambientOverlay.hidden = false;
+    elements.body.classList.add("ambient-open");
+    renderAmbientControls();
+    elements.ambientCloseButton.focus();
+  }
+
+  function closeAmbientDialog() {
+    elements.ambientOverlay.hidden = true;
+    elements.body.classList.remove("ambient-open");
+
+    if (lastAmbientTrigger && typeof lastAmbientTrigger.focus === "function") {
+      lastAmbientTrigger.focus();
+    }
+  }
+
+  function switchAmbientCategory(categoryKey) {
+    if (!ambientCategories[categoryKey]) {
+      return;
+    }
+
+    activeAmbientCategory = categoryKey;
+    renderAmbientControls();
+  }
+
+  // Update the selected ambient track. Choosing a rain option starts playback
+  // immediately because the click is a trusted browser audio gesture.
+  function chooseAmbientSound(soundKey) {
+    if (!ambientSounds[soundKey]) {
+      return;
+    }
+
+    state.settings.ambientSound = soundKey;
+    saveState();
+
+    if (soundKey === "off") {
+      stopAmbientSound();
+    } else {
+      startAmbientSound();
+    }
+
+    render();
+  }
+
+  // Ambient Sounds can run independently from the timer.
+  function toggleAmbientPlayback() {
+    if (state.settings.ambientSound === "off") {
+      return;
+    }
+
+    if (ambientState.isPlaying || ambientState.isPending) {
+      stopAmbientSound();
+    } else {
+      startAmbientSound();
+    }
+
+    render();
+  }
+
+  // Store volume as a percentage so it survives reloads cleanly.
+  function updateAmbientVolume() {
+    state.settings.ambientVolume = boundedInteger(elements.ambientVolume.value, 0, 100, defaults.settings.ambientVolume);
+    elements.ambientVolume.value = state.settings.ambientVolume;
+    elements.ambientVolumeValue.textContent = `${state.settings.ambientVolume}%`;
+    applyAmbientVolume();
+    saveState();
+  }
+
+  // Start two audio elements for the chosen rain file; only one is audible at a
+  // time, and the second is ready to overlap the first near the loop point.
+  async function startAmbientSound() {
+    const soundKey = state.settings.ambientSound;
+    if (soundKey === "off" || !prepareAmbientPlayers(soundKey)) {
+      stopAmbientSound();
+      return;
+    }
+
+    if (ambientState.isPlaying || ambientState.isPending) {
+      applyAmbientVolume();
+      return;
+    }
+
+    const activePlayer = ambientState.players[ambientState.activeIndex];
+    ambientState.isPending = true;
+    activePlayer.loop = false;
+    activePlayer.currentTime = 0;
+    activePlayer.volume = targetAmbientVolume();
+
+    try {
+      await activePlayer.play();
+      ambientState.isPlaying = true;
+      startAmbientLoopMonitor();
+    } catch {
+      ambientState.isPlaying = false;
+      setTransientStatus("Sound blocked");
+    } finally {
+      ambientState.isPending = false;
+      renderAmbientControls();
+    }
+  }
+
+  function stopAmbientSound() {
+    window.clearInterval(ambientState.loopHandle);
+    window.clearInterval(ambientState.fadeHandle);
+    ambientState.loopHandle = null;
+    ambientState.fadeHandle = null;
+    ambientState.isPlaying = false;
+    ambientState.isPending = false;
+    ambientState.isCrossfading = false;
+
+    ambientState.players.forEach((player) => {
+      player.pause();
+      player.currentTime = 0;
+      player.loop = false;
+      player.volume = 0;
+    });
+
+    renderAmbientControls();
+  }
+
+  function prepareAmbientPlayers(soundKey) {
+    const sound = ambientSounds[soundKey];
+    if (!sound || !sound.src) {
+      return false;
+    }
+
+    if (ambientState.soundKey === soundKey && ambientState.players.length === 2) {
+      return true;
+    }
+
+    stopAmbientSound();
+    ambientState.soundKey = soundKey;
+    ambientState.activeIndex = 0;
+    ambientState.players = [createAmbientPlayer(sound.src), createAmbientPlayer(sound.src)];
+    return true;
+  }
+
+  function createAmbientPlayer(src) {
+    const player = new Audio(src);
+    player.preload = "auto";
+    player.loop = false;
+    player.volume = 0;
+    return player;
+  }
+
+  function startAmbientLoopMonitor() {
+    window.clearInterval(ambientState.loopHandle);
+    ambientState.loopHandle = window.setInterval(checkAmbientLoop, 180);
+  }
+
+  function checkAmbientLoop() {
+    if (!ambientState.isPlaying || ambientState.isCrossfading) {
+      return;
+    }
+
+    const activePlayer = ambientState.players[ambientState.activeIndex];
+    if (!activePlayer || !Number.isFinite(activePlayer.duration) || activePlayer.duration <= 0) {
+      return;
+    }
+    activePlayer.loop = false;
+
+    const fadeSeconds = Math.min(AMBIENT_CROSSFADE_SECONDS, Math.max(0.7, activePlayer.duration * 0.25));
+    if (activePlayer.duration - activePlayer.currentTime <= fadeSeconds) {
+      crossfadeAmbientPlayers(fadeSeconds);
+    }
+  }
+
+  async function crossfadeAmbientPlayers(fadeSeconds) {
+    const fromPlayer = ambientState.players[ambientState.activeIndex];
+    const nextIndex = ambientState.activeIndex === 0 ? 1 : 0;
+    const toPlayer = ambientState.players[nextIndex];
+
+    if (!fromPlayer || !toPlayer) {
+      return;
+    }
+
+    ambientState.isCrossfading = true;
+    fromPlayer.loop = false;
+    toPlayer.loop = false;
+    toPlayer.pause();
+    toPlayer.currentTime = 0;
+    toPlayer.volume = 0;
+
+    try {
+      await toPlayer.play();
+    } catch {
+      fromPlayer.loop = true;
+      ambientState.isCrossfading = false;
+      return;
+    }
+
+    const startedAt = window.performance.now();
+    window.clearInterval(ambientState.fadeHandle);
+    ambientState.fadeHandle = window.setInterval(() => {
+      const elapsed = (window.performance.now() - startedAt) / 1000;
+      const progress = Math.min(1, elapsed / fadeSeconds);
+      const eased = easeInOut(progress);
+      const targetVolume = targetAmbientVolume();
+
+      fromPlayer.volume = targetVolume * (1 - eased);
+      toPlayer.volume = targetVolume * eased;
+
+      if (progress >= 1) {
+        window.clearInterval(ambientState.fadeHandle);
+        ambientState.fadeHandle = null;
+        fromPlayer.pause();
+        fromPlayer.currentTime = 0;
+        fromPlayer.volume = 0;
+        toPlayer.volume = targetVolume;
+        ambientState.activeIndex = nextIndex;
+        ambientState.isCrossfading = false;
+      }
+    }, 40);
+  }
+
+  function applyAmbientVolume() {
+    if (!ambientState.players.length) {
+      return;
+    }
+
+    const targetVolume = targetAmbientVolume();
+    ambientState.players.forEach((player, index) => {
+      if (!player.paused && !ambientState.isCrossfading) {
+        player.volume = index === ambientState.activeIndex ? targetVolume : 0;
+      }
+    });
+  }
+
+  function targetAmbientVolume() {
+    return Math.min(1, Math.max(0, state.settings.ambientVolume / 100));
+  }
+
+  function categoryForSound(soundKey) {
+    const sound = ambientSounds[soundKey];
+    if (!sound || !Array.isArray(sound.categories)) {
+      return "focus";
+    }
+
+    return sound.categories.includes(activeAmbientCategory)
+      ? activeAmbientCategory
+      : sound.categories[0] || "focus";
+  }
+
+  function easeInOut(progress) {
+    return progress < 0.5
+      ? 2 * progress * progress
+      : 1 - ((-2 * progress + 2) ** 2) / 2;
   }
 
   // Flip between dark and light themes, then persist the choice.
@@ -573,9 +895,8 @@
       "Notification" in window &&
       Notification.permission === "granted"
     ) {
-      const body = state.task ? `${mode.completeMessage} ${state.task}` : mode.completeMessage;
       new Notification(mode.completeTitle, {
-        body,
+        body: mode.completeMessage,
         icon: "assets/app-icon.svg",
         badge: "assets/app-icon.svg"
       });
@@ -715,7 +1036,67 @@
     elements.todayMetric.textContent = pluralise(state.todayFocusSessions, "focus session");
     elements.minutesMetric.textContent = `${state.todayFocusMinutes} min`;
     elements.clearStatsButton.disabled = state.todayFocusSessions === 0 && state.todayFocusMinutes === 0;
+    renderAmbientControls();
     renderStatus();
+  }
+
+  function renderAmbientControls() {
+    const soundKey = ambientSounds[state.settings.ambientSound] ? state.settings.ambientSound : "off";
+    const sound = ambientSounds[soundKey];
+    const isOff = soundKey === "off";
+
+    elements.ambientLabel.textContent = ambientState.isPlaying ? `${sound.label} playing` : sound.label;
+    elements.ambientVolume.value = state.settings.ambientVolume;
+    elements.ambientVolumeValue.textContent = `${state.settings.ambientVolume}%`;
+    elements.ambientVolume.disabled = isOff;
+    elements.ambientToggleButton.disabled = isOff;
+    elements.ambientToggleButton.textContent = ambientState.isPending
+      ? "Loading"
+      : ambientState.isPlaying
+        ? "Stop"
+        : "Play";
+    elements.ambientToggleButton.setAttribute("aria-pressed", String(ambientState.isPlaying));
+
+    elements.ambientCategoryTabs.forEach((button) => {
+      const isActive = button.dataset.category === activeAmbientCategory;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-selected", String(isActive));
+    });
+
+    renderAmbientLibrary(soundKey);
+  }
+
+  function renderAmbientLibrary(selectedSoundKey) {
+    const fragment = document.createDocumentFragment();
+
+    Object.entries(ambientSounds)
+      .filter(([, sound]) => sound.categories.includes(activeAmbientCategory))
+      .forEach(([soundKey, sound]) => {
+        const button = document.createElement("button");
+        const isSelected = soundKey === selectedSoundKey;
+        button.className = "ambient-sound-card";
+        button.type = "button";
+        button.dataset.sound = soundKey;
+        button.setAttribute("role", "radio");
+        button.setAttribute("aria-checked", String(isSelected));
+        button.classList.toggle("is-active", isSelected);
+
+        const copy = document.createElement("span");
+        copy.className = "ambient-sound-copy";
+
+        const label = document.createElement("span");
+        label.textContent = sound.label;
+
+        const tone = document.createElement("small");
+        tone.textContent = sound.tone;
+
+        copy.append(label, tone);
+        button.appendChild(copy);
+        button.addEventListener("click", () => chooseAmbientSound(soundKey));
+        fragment.appendChild(button);
+      });
+
+    elements.ambientLibrary.replaceChildren(fragment);
   }
 
   // Rebuild cycle dots only when the long-break cadence changes.
