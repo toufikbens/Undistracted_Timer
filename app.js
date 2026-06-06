@@ -507,7 +507,7 @@
       }
 
       render();
-    }, 250);
+    }, 1000);
   }
 
   // Calculate remaining time from the saved end timestamp when running.
@@ -774,7 +774,7 @@
 
   function createAmbientPlayer(src) {
     const player = new Audio(src);
-    player.preload = "auto";
+    player.preload = "metadata";
     player.loop = false;
     player.volume = 0;
     return player;
