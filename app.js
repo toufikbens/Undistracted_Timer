@@ -80,7 +80,8 @@
       theme: "dark",
       ambientSound: "off",
       ambientSounds: [],
-      ambientVolume: 42
+      ambientVolume: 42,
+      ambientSoundVolumes: {}
     }
   };
 
@@ -285,6 +286,7 @@
     const normalisedAmbientSounds = normaliseAmbientSoundKeys(savedAmbientSounds);
     setAmbientSelection(normalisedAmbientSounds.length ? normalisedAmbientSounds : legacyAmbientSounds, nextState);
     nextState.settings.ambientVolume = boundedInteger(nextState.settings.ambientVolume, 0, 100, defaults.settings.ambientVolume);
+    nextState.settings.ambientSoundVolumes = normaliseAmbientSoundVolumes(nextState.settings.ambientSoundVolumes);
 
     if (!Number.isFinite(Number(nextState.currentDuration)) || Number(nextState.currentDuration) <= 0) {
       nextState.currentDuration = durationFor(nextState.mode, nextState.settings);
@@ -310,6 +312,32 @@
     }
 
     return Array.from(new Set(soundKeys.filter((soundKey) => ambientSounds[soundKey] && ambientSounds[soundKey].src)));
+  }
+
+  function normaliseAmbientSoundVolumes(soundVolumes) {
+    const normalisedVolumes = {};
+    const savedVolumes = soundVolumes && typeof soundVolumes === "object" ? soundVolumes : {};
+
+    Object.keys(ambientSounds).forEach((soundKey) => {
+      if (ambientSounds[soundKey].src) {
+        normalisedVolumes[soundKey] = boundedInteger(savedVolumes[soundKey], 0, 100, 100);
+      }
+    });
+
+    return normalisedVolumes;
+  }
+
+  function ambientSoundVolume(soundKey) {
+    const savedVolumes = state.settings.ambientSoundVolumes || {};
+    return boundedInteger(savedVolumes[soundKey], 0, 100, 100);
+  }
+
+  function setAmbientSoundVolume(soundKey, value) {
+    if (!state.settings.ambientSoundVolumes || typeof state.settings.ambientSoundVolumes !== "object") {
+      state.settings.ambientSoundVolumes = normaliseAmbientSoundVolumes({});
+    }
+
+    state.settings.ambientSoundVolumes[soundKey] = boundedInteger(value, 0, 100, 100);
   }
 
   function selectedAmbientSoundKeys() {
@@ -648,6 +676,18 @@
     saveState();
   }
 
+  function updateAmbientSoundVolume(soundKey, input, valueLabel) {
+    if (!ambientSounds[soundKey] || !ambientSounds[soundKey].src) {
+      return;
+    }
+
+    setAmbientSoundVolume(soundKey, input.value);
+    input.value = ambientSoundVolume(soundKey);
+    valueLabel.textContent = `${ambientSoundVolume(soundKey)}%`;
+    applyAmbientVolume();
+    saveState();
+  }
+
   // Each selected ambience owns two audio elements so tracks can layer while
   // still crossfading smoothly at their individual loop points.
   async function startAmbientSounds() {
@@ -681,7 +721,7 @@
     track.isPending = true;
     activePlayer.loop = false;
     activePlayer.currentTime = 0;
-    activePlayer.volume = targetAmbientVolume();
+    activePlayer.volume = targetAmbientVolume(soundKey);
 
     try {
       await activePlayer.play();
@@ -840,7 +880,7 @@
       const elapsed = (window.performance.now() - startedAt) / 1000;
       const progress = Math.min(1, elapsed / fadeSeconds);
       const eased = easeInOut(progress);
-      const targetVolume = targetAmbientVolume();
+      const targetVolume = targetAmbientVolume(track.soundKey);
 
       fromPlayer.volume = targetVolume * (1 - eased);
       toPlayer.volume = targetVolume * eased;
@@ -863,7 +903,7 @@
   }
 
   function applyAmbientTrackVolume(track) {
-    const targetVolume = targetAmbientVolume();
+    const targetVolume = targetAmbientVolume(track.soundKey);
     track.players.forEach((player, index) => {
       if (!player.paused && !track.isCrossfading) {
         player.volume = index === track.activeIndex ? targetVolume : 0;
@@ -883,8 +923,12 @@
     return ambientTracks().some((track) => track.isPending);
   }
 
-  function targetAmbientVolume() {
-    return Math.min(1, Math.max(0, state.settings.ambientVolume / 100));
+  function targetAmbientVolume(soundKey) {
+    const globalVolume = Math.min(1, Math.max(0, state.settings.ambientVolume / 100));
+    const soundVolume = ambientSounds[soundKey] && ambientSounds[soundKey].src
+      ? ambientSoundVolume(soundKey) / 100
+      : 1;
+    return Math.min(1, Math.max(0, globalVolume * soundVolume));
   }
 
   function easeInOut(progress) {
@@ -1147,16 +1191,18 @@
 
     Object.entries(ambientSounds)
       .forEach(([soundKey, sound]) => {
-        const button = document.createElement("button");
+        const card = document.createElement("div");
+        const selectButton = document.createElement("button");
         const isSelected = soundKey === "off"
           ? selectedSoundKeys.length === 0
           : selectedSoundKeys.includes(soundKey);
-        button.className = "ambient-sound-card";
-        button.type = "button";
-        button.dataset.sound = soundKey;
-        button.setAttribute("role", "checkbox");
-        button.setAttribute("aria-checked", String(isSelected));
-        button.classList.toggle("is-active", isSelected);
+        card.className = "ambient-sound-card";
+        card.dataset.sound = soundKey;
+        card.classList.toggle("is-active", isSelected);
+        selectButton.className = "ambient-sound-select";
+        selectButton.type = "button";
+        selectButton.setAttribute("role", "checkbox");
+        selectButton.setAttribute("aria-checked", String(isSelected));
 
         const copy = document.createElement("span");
         copy.className = "ambient-sound-copy";
@@ -1168,9 +1214,33 @@
         tone.textContent = sound.tone;
 
         copy.append(label, tone);
-        button.appendChild(copy);
-        button.addEventListener("click", () => chooseAmbientSound(soundKey));
-        fragment.appendChild(button);
+        selectButton.appendChild(copy);
+        selectButton.addEventListener("click", () => chooseAmbientSound(soundKey));
+        card.appendChild(selectButton);
+
+        if (sound.src) {
+          const volumeControl = document.createElement("label");
+          volumeControl.className = "ambient-sound-volume";
+
+          const volumeText = document.createElement("span");
+          const volumeValue = document.createElement("strong");
+          volumeValue.textContent = `${ambientSoundVolume(soundKey)}%`;
+          volumeText.append("Volume ", volumeValue);
+
+          const volumeInput = document.createElement("input");
+          volumeInput.type = "range";
+          volumeInput.min = "0";
+          volumeInput.max = "100";
+          volumeInput.step = "1";
+          volumeInput.value = ambientSoundVolume(soundKey);
+          volumeInput.setAttribute("aria-label", `${sound.label} volume`);
+          volumeInput.addEventListener("input", () => updateAmbientSoundVolume(soundKey, volumeInput, volumeValue));
+
+          volumeControl.append(volumeText, volumeInput);
+          card.appendChild(volumeControl);
+        }
+
+        fragment.appendChild(card);
       });
 
     elements.ambientLibrary.replaceChildren(fragment);

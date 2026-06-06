@@ -588,16 +588,13 @@ body.ambient-open {
 
 .ambient-sound-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: center;
+  gap: 10px;
   min-height: 56px;
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--panel-bg);
   color: var(--text);
-  text-align: left;
 }
 
 .ambient-sound-card:hover {
@@ -605,8 +602,21 @@ body.ambient-open {
   background: var(--control-hover-bg);
 }
 
-.ambient-sound-card span,
-.ambient-sound-card small {
+.ambient-sound-select {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  min-height: 34px;
+  padding: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+}
+
+.ambient-sound-select span,
+.ambient-sound-select small {
   min-width: 0;
 }
 
@@ -634,12 +644,36 @@ body.ambient-open {
   background: var(--accent-soft);
 }
 
-.ambient-sound-card.is-active::after {
+.ambient-sound-card.is-active .ambient-sound-select::after {
   content: "";
   width: 9px;
   height: 9px;
   border-radius: 50%;
   background: var(--accent);
+}
+
+.ambient-sound-volume {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.ambient-sound-volume span {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ambient-sound-volume strong {
+  color: var(--text);
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+.ambient-sound-volume input {
+  width: 100%;
+  min-height: 20px;
 }
 
 .ambient-window-footer {
