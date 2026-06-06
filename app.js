@@ -31,15 +31,6 @@
     }
   };
 
-  const ambientCategories = {
-    focus: {
-      label: "Focus"
-    },
-    calm: {
-      label: "Calm"
-    }
-  };
-
   const ambientSounds = {
     off: {
       label: "Off",
@@ -57,6 +48,12 @@
       tone: "Dense rain",
       categories: ["focus"],
       src: "assets/Heavy rain 1.mp3"
+    },
+    epicStorm: {
+      label: "Epic storm",
+      tone: "Rolling storm",
+      categories: ["focus", "calm"],
+      src: "assets/Epic-storm.mp3"
     }
   };
 
@@ -82,6 +79,7 @@
       notifications: false,
       theme: "dark",
       ambientSound: "off",
+      ambientSounds: [],
       ambientVolume: 42
     }
   };
@@ -93,17 +91,9 @@
   let tickHandle = null;
   let audioContext = null;
   let wakeLock = null;
-  let activeAmbientCategory = "focus";
   let lastAmbientTrigger = null;
   let ambientState = {
-    soundKey: "off",
-    players: [],
-    activeIndex: 0,
-    loopHandle: null,
-    fadeHandle: null,
-    isPlaying: false,
-    isPending: false,
-    isCrossfading: false
+    tracks: {}
   };
 
   // Cache DOM lookups once, then reuse these references throughout the app.
@@ -133,7 +123,6 @@
     ambientManageButton: document.getElementById("ambientManageButton"),
     ambientOverlay: document.getElementById("ambientOverlay"),
     ambientCloseButton: document.getElementById("ambientCloseButton"),
-    ambientCategoryTabs: Array.from(document.querySelectorAll(".ambient-tab")),
     ambientLibrary: document.getElementById("ambientLibrary"),
     ambientToggleButton: document.getElementById("ambientToggleButton"),
     ambientVolume: document.getElementById("ambientVolume"),
@@ -191,9 +180,6 @@
       if (event.target === elements.ambientOverlay) {
         closeAmbientDialog();
       }
-    });
-    elements.ambientCategoryTabs.forEach((button) => {
-      button.addEventListener("click", () => switchAmbientCategory(button.dataset.category));
     });
     elements.ambientToggleButton.addEventListener("click", toggleAmbientPlayback);
     elements.ambientVolume.addEventListener("input", updateAmbientVolume);
@@ -290,9 +276,14 @@
     nextState.todayFocusSessions = boundedInteger(nextState.todayFocusSessions, 0, 10000, 0);
     nextState.todayFocusMinutes = boundedInteger(nextState.todayFocusMinutes, 0, 100000, 0);
     nextState.settings.theme = nextState.settings.theme === "light" ? "light" : "dark";
-    nextState.settings.ambientSound = ambientSounds[nextState.settings.ambientSound]
-      ? nextState.settings.ambientSound
-      : defaults.settings.ambientSound;
+    const savedAmbientSounds = Array.isArray(nextState.settings.ambientSounds)
+      ? nextState.settings.ambientSounds
+      : [];
+    const legacyAmbientSounds = ambientSounds[nextState.settings.ambientSound] && nextState.settings.ambientSound !== "off"
+      ? [nextState.settings.ambientSound]
+      : defaults.settings.ambientSounds;
+    const normalisedAmbientSounds = normaliseAmbientSoundKeys(savedAmbientSounds);
+    setAmbientSelection(normalisedAmbientSounds.length ? normalisedAmbientSounds : legacyAmbientSounds, nextState);
     nextState.settings.ambientVolume = boundedInteger(nextState.settings.ambientVolume, 0, 100, defaults.settings.ambientVolume);
 
     if (!Number.isFinite(Number(nextState.currentDuration)) || Number(nextState.currentDuration) <= 0) {
@@ -311,6 +302,23 @@
       return fallback;
     }
     return Math.min(max, Math.max(min, number));
+  }
+
+  function normaliseAmbientSoundKeys(soundKeys) {
+    if (!Array.isArray(soundKeys)) {
+      return [];
+    }
+
+    return Array.from(new Set(soundKeys.filter((soundKey) => ambientSounds[soundKey] && ambientSounds[soundKey].src)));
+  }
+
+  function selectedAmbientSoundKeys() {
+    return normaliseAmbientSoundKeys(state.settings.ambientSounds);
+  }
+
+  function setAmbientSelection(soundKeys, targetState = state) {
+    targetState.settings.ambientSounds = normaliseAmbientSoundKeys(soundKeys);
+    targetState.settings.ambientSound = targetState.settings.ambientSounds[0] || "off";
   }
 
   // Persist the full app state after each meaningful change.
@@ -384,7 +392,7 @@
 
     state.currentDuration = state.currentDuration || modeDuration(state.mode);
     unlockAudio();
-    startAmbientSound();
+    startAmbientSounds();
     state.isRunning = true;
     state.endAt = Date.now() + state.remaining * 1000;
     setTicking(true);
@@ -562,7 +570,6 @@
   }
 
   function openAmbientDialog() {
-    activeAmbientCategory = categoryForSound(state.settings.ambientSound);
     lastAmbientTrigger = document.activeElement;
     elements.ambientOverlay.hidden = false;
     elements.body.classList.add("ambient-open");
@@ -579,44 +586,54 @@
     }
   }
 
-  function switchAmbientCategory(categoryKey) {
-    if (!ambientCategories[categoryKey]) {
-      return;
-    }
-
-    activeAmbientCategory = categoryKey;
-    renderAmbientControls();
-  }
-
-  // Update the selected ambient track. Choosing a rain option starts playback
-  // immediately because the click is a trusted browser audio gesture.
-  function chooseAmbientSound(soundKey) {
+  // Toggle ambient tracks. Choosing a rain option starts playback immediately
+  // because the click is a trusted browser audio gesture.
+  async function chooseAmbientSound(soundKey) {
     if (!ambientSounds[soundKey]) {
       return;
     }
 
-    state.settings.ambientSound = soundKey;
-    saveState();
-
     if (soundKey === "off") {
-      stopAmbientSound();
+      setAmbientSelection([]);
+      stopAmbientSounds({ remove: true });
+      saveState();
+      render();
+      return;
     } else {
-      startAmbientSound();
+      const selectedSoundKeys = selectedAmbientSoundKeys();
+      const isSelected = selectedSoundKeys.includes(soundKey);
+      const nextSoundKeys = isSelected
+        ? selectedSoundKeys.filter((selectedSoundKey) => selectedSoundKey !== soundKey)
+        : [...selectedSoundKeys, soundKey];
+
+      setAmbientSelection(nextSoundKeys);
+
+      if (isSelected) {
+        stopAmbientTrack(soundKey, { remove: true });
+      } else {
+        saveState();
+        render();
+        const started = await startAmbientTrack(soundKey);
+        if (!started && selectedAmbientSoundKeys().includes(soundKey)) {
+          setTransientStatus("Sound blocked");
+        }
+      }
     }
 
+    saveState();
     render();
   }
 
   // Ambient Sounds can run independently from the timer.
-  function toggleAmbientPlayback() {
-    if (state.settings.ambientSound === "off") {
+  async function toggleAmbientPlayback() {
+    if (!selectedAmbientSoundKeys().length) {
       return;
     }
 
-    if (ambientState.isPlaying || ambientState.isPending) {
-      stopAmbientSound();
+    if (ambientIsPlaying() || ambientIsPending()) {
+      stopAmbientSounds();
     } else {
-      startAmbientSound();
+      await startAmbientSounds();
     }
 
     render();
@@ -631,73 +648,128 @@
     saveState();
   }
 
-  // Start two audio elements for the chosen rain file; only one is audible at a
-  // time, and the second is ready to overlap the first near the loop point.
-  async function startAmbientSound() {
-    const soundKey = state.settings.ambientSound;
-    if (soundKey === "off" || !prepareAmbientPlayers(soundKey)) {
-      stopAmbientSound();
+  // Each selected ambience owns two audio elements so tracks can layer while
+  // still crossfading smoothly at their individual loop points.
+  async function startAmbientSounds() {
+    const soundKeys = selectedAmbientSoundKeys();
+    if (!soundKeys.length) {
+      stopAmbientSounds();
       return;
     }
 
-    if (ambientState.isPlaying || ambientState.isPending) {
-      applyAmbientVolume();
-      return;
+    const results = await Promise.all(soundKeys.map((soundKey) => startAmbientTrack(soundKey)));
+    if (results.some((started) => !started)) {
+      setTransientStatus("Sound blocked");
+    }
+    renderAmbientControls();
+  }
+
+  async function startAmbientTrack(soundKey) {
+    const track = prepareAmbientTrack(soundKey);
+    if (!track) {
+      return false;
     }
 
-    const activePlayer = ambientState.players[ambientState.activeIndex];
-    ambientState.isPending = true;
+    if (track.isPlaying || track.isPending) {
+      applyAmbientTrackVolume(track);
+      return true;
+    }
+
+    const activePlayer = track.players[track.activeIndex];
+    const playToken = track.playToken + 1;
+    track.playToken = playToken;
+    track.isPending = true;
     activePlayer.loop = false;
     activePlayer.currentTime = 0;
     activePlayer.volume = targetAmbientVolume();
 
     try {
       await activePlayer.play();
-      ambientState.isPlaying = true;
-      startAmbientLoopMonitor();
+      if (track.playToken !== playToken || !selectedAmbientSoundKeys().includes(soundKey)) {
+        activePlayer.pause();
+        activePlayer.currentTime = 0;
+        activePlayer.volume = 0;
+        return false;
+      }
+
+      track.isPlaying = true;
+      startAmbientLoopMonitor(track);
+      return true;
     } catch {
-      ambientState.isPlaying = false;
-      setTransientStatus("Sound blocked");
+      track.isPlaying = false;
+      return false;
     } finally {
-      ambientState.isPending = false;
+      track.isPending = false;
       renderAmbientControls();
     }
   }
 
-  function stopAmbientSound() {
-    window.clearInterval(ambientState.loopHandle);
-    window.clearInterval(ambientState.fadeHandle);
-    ambientState.loopHandle = null;
-    ambientState.fadeHandle = null;
-    ambientState.isPlaying = false;
-    ambientState.isPending = false;
-    ambientState.isCrossfading = false;
+  function stopAmbientSounds({ remove = false } = {}) {
+    Object.keys(ambientState.tracks).forEach((soundKey) => {
+      stopAmbientTrack(soundKey, { remove });
+    });
 
-    ambientState.players.forEach((player) => {
+    renderAmbientControls();
+  }
+
+  function stopAmbientTrack(soundKey, { remove = false } = {}) {
+    const track = ambientState.tracks[soundKey];
+    if (!track) {
+      return;
+    }
+
+    window.clearInterval(track.loopHandle);
+    window.clearInterval(track.fadeHandle);
+    track.loopHandle = null;
+    track.fadeHandle = null;
+    track.playToken += 1;
+    track.isPlaying = false;
+    track.isPending = false;
+    track.isCrossfading = false;
+
+    track.players.forEach((player) => {
       player.pause();
       player.currentTime = 0;
       player.loop = false;
       player.volume = 0;
     });
 
-    renderAmbientControls();
+    if (remove) {
+      delete ambientState.tracks[soundKey];
+    }
   }
 
-  function prepareAmbientPlayers(soundKey) {
+  function prepareAmbientTrack(soundKey) {
     const sound = ambientSounds[soundKey];
     if (!sound || !sound.src) {
-      return false;
+      return null;
     }
 
-    if (ambientState.soundKey === soundKey && ambientState.players.length === 2) {
-      return true;
+    const existingTrack = ambientState.tracks[soundKey];
+    if (existingTrack && existingTrack.players.length === 2) {
+      return existingTrack;
     }
 
-    stopAmbientSound();
-    ambientState.soundKey = soundKey;
-    ambientState.activeIndex = 0;
-    ambientState.players = [createAmbientPlayer(sound.src), createAmbientPlayer(sound.src)];
-    return true;
+    if (existingTrack) {
+      stopAmbientTrack(soundKey, { remove: true });
+    }
+
+    ambientState.tracks[soundKey] = createAmbientTrack(soundKey, sound.src);
+    return ambientState.tracks[soundKey];
+  }
+
+  function createAmbientTrack(soundKey, src) {
+    return {
+      soundKey,
+      players: [createAmbientPlayer(src), createAmbientPlayer(src)],
+      activeIndex: 0,
+      loopHandle: null,
+      fadeHandle: null,
+      isPlaying: false,
+      isPending: false,
+      isCrossfading: false,
+      playToken: 0
+    };
   }
 
   function createAmbientPlayer(src) {
@@ -708,17 +780,17 @@
     return player;
   }
 
-  function startAmbientLoopMonitor() {
-    window.clearInterval(ambientState.loopHandle);
-    ambientState.loopHandle = window.setInterval(checkAmbientLoop, 180);
+  function startAmbientLoopMonitor(track) {
+    window.clearInterval(track.loopHandle);
+    track.loopHandle = window.setInterval(() => checkAmbientLoop(track), 180);
   }
 
-  function checkAmbientLoop() {
-    if (!ambientState.isPlaying || ambientState.isCrossfading) {
+  function checkAmbientLoop(track) {
+    if (!track.isPlaying || track.isCrossfading) {
       return;
     }
 
-    const activePlayer = ambientState.players[ambientState.activeIndex];
+    const activePlayer = track.players[track.activeIndex];
     if (!activePlayer || !Number.isFinite(activePlayer.duration) || activePlayer.duration <= 0) {
       return;
     }
@@ -726,20 +798,21 @@
 
     const fadeSeconds = Math.min(AMBIENT_CROSSFADE_SECONDS, Math.max(0.7, activePlayer.duration * 0.25));
     if (activePlayer.duration - activePlayer.currentTime <= fadeSeconds) {
-      crossfadeAmbientPlayers(fadeSeconds);
+      crossfadeAmbientPlayers(track, fadeSeconds);
     }
   }
 
-  async function crossfadeAmbientPlayers(fadeSeconds) {
-    const fromPlayer = ambientState.players[ambientState.activeIndex];
-    const nextIndex = ambientState.activeIndex === 0 ? 1 : 0;
-    const toPlayer = ambientState.players[nextIndex];
+  async function crossfadeAmbientPlayers(track, fadeSeconds) {
+    const fromPlayer = track.players[track.activeIndex];
+    const nextIndex = track.activeIndex === 0 ? 1 : 0;
+    const toPlayer = track.players[nextIndex];
+    const fadeToken = track.playToken;
 
     if (!fromPlayer || !toPlayer) {
       return;
     }
 
-    ambientState.isCrossfading = true;
+    track.isCrossfading = true;
     fromPlayer.loop = false;
     toPlayer.loop = false;
     toPlayer.pause();
@@ -748,15 +821,22 @@
 
     try {
       await toPlayer.play();
+      if (track.playToken !== fadeToken || !selectedAmbientSoundKeys().includes(track.soundKey)) {
+        toPlayer.pause();
+        toPlayer.currentTime = 0;
+        toPlayer.volume = 0;
+        track.isCrossfading = false;
+        return;
+      }
     } catch {
       fromPlayer.loop = true;
-      ambientState.isCrossfading = false;
+      track.isCrossfading = false;
       return;
     }
 
     const startedAt = window.performance.now();
-    window.clearInterval(ambientState.fadeHandle);
-    ambientState.fadeHandle = window.setInterval(() => {
+    window.clearInterval(track.fadeHandle);
+    track.fadeHandle = window.setInterval(() => {
       const elapsed = (window.performance.now() - startedAt) / 1000;
       const progress = Math.min(1, elapsed / fadeSeconds);
       const eased = easeInOut(progress);
@@ -766,44 +846,45 @@
       toPlayer.volume = targetVolume * eased;
 
       if (progress >= 1) {
-        window.clearInterval(ambientState.fadeHandle);
-        ambientState.fadeHandle = null;
+        window.clearInterval(track.fadeHandle);
+        track.fadeHandle = null;
         fromPlayer.pause();
         fromPlayer.currentTime = 0;
         fromPlayer.volume = 0;
         toPlayer.volume = targetVolume;
-        ambientState.activeIndex = nextIndex;
-        ambientState.isCrossfading = false;
+        track.activeIndex = nextIndex;
+        track.isCrossfading = false;
       }
     }, 40);
   }
 
   function applyAmbientVolume() {
-    if (!ambientState.players.length) {
-      return;
-    }
+    ambientTracks().forEach(applyAmbientTrackVolume);
+  }
 
+  function applyAmbientTrackVolume(track) {
     const targetVolume = targetAmbientVolume();
-    ambientState.players.forEach((player, index) => {
-      if (!player.paused && !ambientState.isCrossfading) {
-        player.volume = index === ambientState.activeIndex ? targetVolume : 0;
+    track.players.forEach((player, index) => {
+      if (!player.paused && !track.isCrossfading) {
+        player.volume = index === track.activeIndex ? targetVolume : 0;
       }
     });
   }
 
-  function targetAmbientVolume() {
-    return Math.min(1, Math.max(0, state.settings.ambientVolume / 100));
+  function ambientTracks() {
+    return Object.values(ambientState.tracks);
   }
 
-  function categoryForSound(soundKey) {
-    const sound = ambientSounds[soundKey];
-    if (!sound || !Array.isArray(sound.categories)) {
-      return "focus";
-    }
+  function ambientIsPlaying() {
+    return ambientTracks().some((track) => track.isPlaying);
+  }
 
-    return sound.categories.includes(activeAmbientCategory)
-      ? activeAmbientCategory
-      : sound.categories[0] || "focus";
+  function ambientIsPending() {
+    return ambientTracks().some((track) => track.isPending);
+  }
+
+  function targetAmbientVolume() {
+    return Math.min(1, Math.max(0, state.settings.ambientVolume / 100));
   }
 
   function easeInOut(progress) {
@@ -1041,43 +1122,39 @@
   }
 
   function renderAmbientControls() {
-    const soundKey = ambientSounds[state.settings.ambientSound] ? state.settings.ambientSound : "off";
-    const sound = ambientSounds[soundKey];
-    const isOff = soundKey === "off";
+    const selectedSoundKeys = selectedAmbientSoundKeys();
+    const isOff = selectedSoundKeys.length === 0;
+    const isPlaying = ambientIsPlaying();
+    const isPending = ambientIsPending();
 
-    elements.ambientLabel.textContent = ambientState.isPlaying ? `${sound.label} playing` : sound.label;
+    elements.ambientLabel.textContent = ambientLabelForSelection(selectedSoundKeys, isPlaying);
     elements.ambientVolume.value = state.settings.ambientVolume;
     elements.ambientVolumeValue.textContent = `${state.settings.ambientVolume}%`;
     elements.ambientVolume.disabled = isOff;
     elements.ambientToggleButton.disabled = isOff;
-    elements.ambientToggleButton.textContent = ambientState.isPending
+    elements.ambientToggleButton.textContent = isPending
       ? "Loading"
-      : ambientState.isPlaying
+      : isPlaying
         ? "Stop"
         : "Play";
-    elements.ambientToggleButton.setAttribute("aria-pressed", String(ambientState.isPlaying));
+    elements.ambientToggleButton.setAttribute("aria-pressed", String(isPlaying));
 
-    elements.ambientCategoryTabs.forEach((button) => {
-      const isActive = button.dataset.category === activeAmbientCategory;
-      button.classList.toggle("is-active", isActive);
-      button.setAttribute("aria-selected", String(isActive));
-    });
-
-    renderAmbientLibrary(soundKey);
+    renderAmbientLibrary(selectedSoundKeys);
   }
 
-  function renderAmbientLibrary(selectedSoundKey) {
+  function renderAmbientLibrary(selectedSoundKeys) {
     const fragment = document.createDocumentFragment();
 
     Object.entries(ambientSounds)
-      .filter(([, sound]) => sound.categories.includes(activeAmbientCategory))
       .forEach(([soundKey, sound]) => {
         const button = document.createElement("button");
-        const isSelected = soundKey === selectedSoundKey;
+        const isSelected = soundKey === "off"
+          ? selectedSoundKeys.length === 0
+          : selectedSoundKeys.includes(soundKey);
         button.className = "ambient-sound-card";
         button.type = "button";
         button.dataset.sound = soundKey;
-        button.setAttribute("role", "radio");
+        button.setAttribute("role", "checkbox");
         button.setAttribute("aria-checked", String(isSelected));
         button.classList.toggle("is-active", isSelected);
 
@@ -1097,6 +1174,19 @@
       });
 
     elements.ambientLibrary.replaceChildren(fragment);
+  }
+
+  function ambientLabelForSelection(soundKeys, isPlaying) {
+    if (!soundKeys.length) {
+      return "Off";
+    }
+
+    const labels = soundKeys.map((soundKey) => ambientSounds[soundKey].label);
+    const label = labels.length <= 2
+      ? labels.join(" + ")
+      : `${labels.length} sounds`;
+
+    return isPlaying ? `${label} playing` : label;
   }
 
   // Rebuild cycle dots only when the long-break cadence changes.
