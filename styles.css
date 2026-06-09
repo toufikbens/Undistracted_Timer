@@ -33,6 +33,9 @@
   --radius: 8px;
   --shadow: none;
   --progress: 0;
+  --page-padding-block: 18px;
+  --page-padding-inline: 18px;
+  --shell-max-height: 820px;
 }
 
 /* Light theme overrides */
@@ -85,10 +88,11 @@ html {
 
 body {
   min-height: 100vh;
+  min-height: 100svh;
   margin: 0;
   display: grid;
   place-items: center;
-  padding: max(18px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+  padding: max(var(--page-padding-block), env(safe-area-inset-top)) max(var(--page-padding-inline), env(safe-area-inset-right)) max(var(--page-padding-block), env(safe-area-inset-bottom)) max(var(--page-padding-inline), env(safe-area-inset-left));
   background: var(--page-bg);
   color: var(--text);
   font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
@@ -116,8 +120,12 @@ input[type="range"] {
 
 /* App shell */
 .shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   width: min(1080px, 100%);
-  min-height: min(720px, calc(100vh - 36px));
+  height: min(var(--shell-max-height), calc(100vh - var(--page-padding-block) - var(--page-padding-block)));
+  height: min(var(--shell-max-height), calc(100svh - var(--page-padding-block) - var(--page-padding-block)));
+  min-height: 0;
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--shell-bg);
@@ -128,11 +136,15 @@ input[type="range"] {
 /* Title bar */
 .titlebar {
   min-height: 82px;
+  min-height: clamp(68px, 10.5vh, 82px);
+  min-height: clamp(68px, 10.5svh, 82px);
   display: grid;
   grid-template-columns: 84px 1fr auto;
   gap: 18px;
   align-items: center;
   padding: 18px 22px;
+  padding-block: clamp(12px, 2.5vh, 18px);
+  padding-block: clamp(12px, 2.5svh, 18px);
   border-bottom: 1px solid var(--border);
   background: var(--titlebar-bg);
 }
@@ -237,16 +249,19 @@ h1 {
 .timer-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 336px;
-  min-height: calc(min(720px, 100vh - 36px) - 82px);
+  min-height: 0;
 }
 
 .timer-stage {
   display: grid;
   grid-template-rows: auto 1fr auto auto;
   place-items: center;
-  gap: 24px;
+  gap: clamp(14px, 3vh, 24px);
+  gap: clamp(14px, 3svh, 24px);
   min-width: 0;
-  padding: 32px clamp(22px, 5vw, 54px);
+  min-height: 0;
+  padding: clamp(18px, 4vh, 32px) clamp(22px, 5vw, 54px);
+  padding: clamp(18px, 4svh, 32px) clamp(22px, 5vw, 54px);
 }
 
 /* Mode tabs */
@@ -279,6 +294,9 @@ h1 {
 .ring-wrap {
   position: relative;
   width: min(410px, 82vw);
+  width: clamp(280px, min(410px, 82vw, calc(100vh - 360px)), 410px);
+  width: clamp(280px, min(410px, 82vw, calc(100svh - 360px)), 410px);
+  container-type: inline-size;
   aspect-ratio: 1;
   display: grid;
   place-items: center;
@@ -314,7 +332,9 @@ h1 {
   display: grid;
   justify-items: center;
   gap: 8px;
+  width: 78%;
   padding: 24px;
+  padding: clamp(14px, 6cqw, 24px);
   text-align: center;
 }
 
@@ -332,6 +352,7 @@ h1 {
 .time-readout strong {
   font-variant-numeric: tabular-nums;
   font-size: clamp(4rem, 12vw, 6.7rem);
+  font-size: clamp(3.4rem, 25cqw, 6.7rem);
   line-height: 0.95;
   font-weight: 760;
 }
@@ -399,6 +420,9 @@ h1 {
   align-content: start;
   gap: 14px;
   min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 16px 22px;
   border-left: 1px solid var(--border);
   background: var(--side-bg);
@@ -767,6 +791,181 @@ body.is-running .status-pill {
   border-color: var(--accent-border);
 }
 
+/* Moderately short desktop screens */
+@media (min-width: 861px) and (max-height: 860px) {
+  :root {
+    --page-padding-block: 12px;
+    --page-padding-inline: 14px;
+  }
+}
+
+/* Short desktop screens */
+@media (min-width: 861px) and (max-height: 820px) {
+  :root {
+    --page-padding-block: 12px;
+    --page-padding-inline: 14px;
+  }
+
+  .titlebar {
+    grid-template-columns: 72px 1fr auto;
+    gap: 14px;
+    padding-inline: 18px;
+  }
+
+  .brand {
+    gap: 10px;
+  }
+
+  .brand-mark {
+    width: 30px;
+    height: 30px;
+  }
+
+  h1 {
+    font-size: 1rem;
+  }
+
+  .timer-layout {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+
+  .timer-stage {
+    gap: 14px;
+    padding: 18px clamp(18px, 4vw, 42px);
+  }
+
+  .ring-wrap {
+    width: clamp(260px, min(360px, 78vw, calc(100vh - 348px)), 360px);
+    width: clamp(260px, min(360px, 78vw, calc(100svh - 348px)), 360px);
+  }
+
+  .time-readout {
+    gap: 6px;
+    padding: 20px;
+    padding: clamp(12px, 6cqw, 20px);
+  }
+
+  .time-readout strong {
+    font-size: clamp(3.4rem, 10vw, 5.6rem);
+    font-size: clamp(3.2rem, 24cqw, 5.6rem);
+  }
+
+  .control-button,
+  .utility-button {
+    min-height: 42px;
+  }
+
+  .side-panel {
+    gap: 10px;
+    padding: 12px 16px;
+  }
+
+  .panel {
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .panel strong {
+    margin-top: 2px;
+    font-size: 0.98rem;
+  }
+
+  .setting-row {
+    grid-template-columns: 1fr 70px;
+    gap: 10px;
+  }
+
+  .setting-row input {
+    min-height: 38px;
+  }
+
+  .preferences {
+    gap: 10px;
+  }
+
+  .toggle-row {
+    min-height: 30px;
+  }
+
+  .ambient-summary {
+    min-height: 50px;
+    padding: 8px 12px;
+  }
+
+  .utility-button.subtle {
+    min-height: 38px;
+  }
+}
+
+@media (min-width: 861px) and (max-height: 740px) {
+  .side-panel {
+    gap: 8px;
+    padding-block: 10px;
+  }
+
+  .panel {
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .ambient-summary {
+    min-height: 46px;
+    padding: 8px 10px;
+  }
+
+  .setting-row input {
+    min-height: 36px;
+  }
+
+  .toggle-row {
+    min-height: 28px;
+  }
+
+  .utility-button.subtle {
+    min-height: 36px;
+  }
+}
+
+@media (min-width: 861px) and (max-height: 660px) {
+  :root {
+    --page-padding-block: 8px;
+    --page-padding-inline: 10px;
+  }
+
+  .titlebar {
+    min-height: 60px;
+    padding-block: 10px;
+  }
+
+  .eyebrow {
+    display: none;
+  }
+
+  .ring-wrap {
+    width: clamp(230px, min(320px, 72vw, calc(100vh - 320px)), 320px);
+    width: clamp(230px, min(320px, 72vw, calc(100svh - 320px)), 320px);
+  }
+
+  .timer-stage {
+    gap: 12px;
+    padding-block: 14px;
+  }
+
+  .side-panel {
+    gap: 8px;
+    padding-block: 10px;
+  }
+
+  .panel,
+  .ambient-summary {
+    padding: 10px;
+  }
+
+  .settings {
+    gap: 8px;
+  }
+}
+
 /* Tablet and narrow desktop layout */
 @media (max-width: 860px) {
   body {
@@ -775,10 +974,13 @@ body.is-running .status-pill {
   }
 
   .shell {
+    height: auto;
     min-height: 100vh;
+    min-height: 100svh;
     border-radius: 0;
     border-left: 0;
     border-right: 0;
+    overflow: visible;
   }
 
   .titlebar {
