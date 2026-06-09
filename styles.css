@@ -332,10 +332,14 @@ h1 {
   display: grid;
   justify-items: center;
   gap: 8px;
-  width: 78%;
+  width: 88%;
   padding: 24px;
-  padding: clamp(14px, 6cqw, 24px);
+  padding: clamp(12px, 5cqw, 22px);
   text-align: center;
+}
+
+.time-readout > * {
+  justify-self: center;
 }
 
 .time-readout p,
@@ -350,11 +354,14 @@ h1 {
 }
 
 .time-readout strong {
+  display: block;
+  max-width: 100%;
   font-variant-numeric: tabular-nums;
   font-size: clamp(4rem, 12vw, 6.7rem);
   font-size: clamp(3.4rem, 25cqw, 6.7rem);
   line-height: 0.95;
   font-weight: 760;
+  white-space: nowrap;
 }
 
 .time-readout span {
@@ -842,7 +849,7 @@ body.is-running .status-pill {
   .time-readout {
     gap: 6px;
     padding: 20px;
-    padding: clamp(12px, 6cqw, 20px);
+    padding: clamp(10px, 5cqw, 18px);
   }
 
   .time-readout strong {
