@@ -1011,6 +1011,8 @@ body.is-running .status-pill {
   .side-panel {
     border-top: 1px solid var(--border);
     border-left: 0;
+    overflow: visible;
+    overscroll-behavior: auto;
     padding: 20px 18px 28px;
   }
 }
