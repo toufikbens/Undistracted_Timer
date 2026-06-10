@@ -85,7 +85,9 @@
     }
   };
 
-  const AMBIENT_CROSSFADE_SECONDS = 2.4;
+  const AMBIENT_CROSSFADE_SECONDS = 8;
+  const AMBIENT_LOOP_EDGE_GUARD_SECONDS = 3;
+  const AMBIENT_LOOP_POLL_MS = 120;
 
   // Runtime state that changes while the page is open.
   let state = loadState();
@@ -803,6 +805,7 @@
       soundKey,
       players: [createAmbientPlayer(src), createAmbientPlayer(src)],
       activeIndex: 0,
+      lastStartTime: 0,
       loopHandle: null,
       fadeHandle: null,
       isPlaying: false,
@@ -814,7 +817,7 @@
 
   function createAmbientPlayer(src) {
     const player = new Audio(src);
-    player.preload = "metadata";
+    player.preload = "auto";
     player.loop = false;
     player.volume = 0;
     return player;
@@ -822,7 +825,7 @@
 
   function startAmbientLoopMonitor(track) {
     window.clearInterval(track.loopHandle);
-    track.loopHandle = window.setInterval(() => checkAmbientLoop(track), 180);
+    track.loopHandle = window.setInterval(() => checkAmbientLoop(track), AMBIENT_LOOP_POLL_MS);
   }
 
   function checkAmbientLoop(track) {
@@ -836,8 +839,9 @@
     }
     activePlayer.loop = false;
 
-    const fadeSeconds = Math.min(AMBIENT_CROSSFADE_SECONDS, Math.max(0.7, activePlayer.duration * 0.25));
-    if (activePlayer.duration - activePlayer.currentTime <= fadeSeconds) {
+    const fadeSeconds = ambientCrossfadeSeconds(activePlayer.duration);
+    const edgeGuardSeconds = ambientLoopEdgeGuardSeconds(activePlayer.duration);
+    if (activePlayer.duration - activePlayer.currentTime <= fadeSeconds + edgeGuardSeconds) {
       crossfadeAmbientPlayers(track, fadeSeconds);
     }
   }
@@ -856,7 +860,7 @@
     fromPlayer.loop = false;
     toPlayer.loop = false;
     toPlayer.pause();
-    toPlayer.currentTime = 0;
+    setAmbientPlayerTime(toPlayer, ambientLoopStartTime(track, fromPlayer.duration));
     toPlayer.volume = 0;
 
     try {
@@ -879,11 +883,12 @@
     track.fadeHandle = window.setInterval(() => {
       const elapsed = (window.performance.now() - startedAt) / 1000;
       const progress = Math.min(1, elapsed / fadeSeconds);
-      const eased = easeInOut(progress);
+      const fadeOut = Math.cos(progress * Math.PI * 0.5);
+      const fadeIn = Math.sin(progress * Math.PI * 0.5);
       const targetVolume = targetAmbientVolume(track.soundKey);
 
-      fromPlayer.volume = targetVolume * (1 - eased);
-      toPlayer.volume = targetVolume * eased;
+      fromPlayer.volume = targetVolume * fadeOut;
+      toPlayer.volume = targetVolume * fadeIn;
 
       if (progress >= 1) {
         window.clearInterval(track.fadeHandle);
@@ -896,6 +901,58 @@
         track.isCrossfading = false;
       }
     }, 40);
+  }
+
+  function ambientCrossfadeSeconds(duration) {
+    if (!Number.isFinite(duration) || duration <= 0) {
+      return AMBIENT_CROSSFADE_SECONDS;
+    }
+
+    return Math.min(AMBIENT_CROSSFADE_SECONDS, Math.max(1.2, duration * 0.18));
+  }
+
+  function ambientLoopEdgeGuardSeconds(duration) {
+    if (!Number.isFinite(duration) || duration <= AMBIENT_LOOP_EDGE_GUARD_SECONDS * 4) {
+      return 0;
+    }
+
+    return Math.min(AMBIENT_LOOP_EDGE_GUARD_SECONDS, duration * 0.04);
+  }
+
+  function ambientLoopStartTime(track, duration) {
+    const edgeGuardSeconds = ambientLoopEdgeGuardSeconds(duration);
+    const fadeSeconds = ambientCrossfadeSeconds(duration);
+
+    if (!Number.isFinite(duration) || duration <= edgeGuardSeconds + fadeSeconds + 6) {
+      track.lastStartTime = 0;
+      return 0;
+    }
+
+    const earliestStart = edgeGuardSeconds;
+    const latestStart = Math.max(earliestStart, duration - edgeGuardSeconds - fadeSeconds - 10);
+    const startRange = latestStart - earliestStart;
+
+    if (startRange <= 0.5) {
+      track.lastStartTime = earliestStart;
+      return earliestStart;
+    }
+
+    let startTime = earliestStart + Math.random() * startRange;
+
+    if (startRange > 16 && Math.abs(startTime - track.lastStartTime) < 8) {
+      startTime = earliestStart + ((startTime - earliestStart + startRange * 0.5) % startRange);
+    }
+
+    track.lastStartTime = startTime;
+    return startTime;
+  }
+
+  function setAmbientPlayerTime(player, seconds) {
+    try {
+      player.currentTime = seconds;
+    } catch {
+      player.currentTime = 0;
+    }
   }
 
   function applyAmbientVolume() {
@@ -929,12 +986,6 @@
       ? ambientSoundVolume(soundKey) / 100
       : 1;
     return Math.min(1, Math.max(0, globalVolume * soundVolume));
-  }
-
-  function easeInOut(progress) {
-    return progress < 0.5
-      ? 2 * progress * progress
-      : 1 - ((-2 * progress + 2) ** 2) / 2;
   }
 
   // Flip between dark and light themes, then persist the choice.
