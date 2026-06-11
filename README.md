@@ -4,7 +4,7 @@ A minimalist dark theme interval timer that runs in any modern browser.
 
 ## Preview
 
-![Undistracted Timer homepage screenshot](assets/undistracted-timer.png)
+![Undistracted Timer homepage screenshot](web/assets/undistracted-timer.png)
 
 ## Features
 
