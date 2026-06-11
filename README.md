@@ -23,20 +23,3 @@ The shared web app lives in `web/`. The macOS desktop wrapper lives in
 ## Live Site
 
 https://timer.undistracted.dev/
-
-## Local Development
-
-```bash
-npm install
-npm run web:serve
-npm run desktop:dev
-```
-
-## Desktop Build
-
-```bash
-npm run desktop:build
-```
-
-The macOS `.app` and `.dmg` outputs are created under
-`src-tauri/target/release/bundle/`.
