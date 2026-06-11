@@ -118,6 +118,132 @@ input[type="range"] {
   accent-color: var(--accent);
 }
 
+[data-tauri-drag-region] {
+  app-region: drag;
+  -webkit-app-region: drag;
+}
+
+button,
+input,
+select,
+textarea,
+a {
+  app-region: no-drag;
+  -webkit-app-region: no-drag;
+}
+
+/* Desktop runtime: native macOS glass window shell */
+html[data-runtime="tauri"] {
+  --bg: transparent;
+  --page-bg: transparent;
+  --shell-bg: rgba(16, 18, 23, 0.68);
+  --titlebar-bg: rgba(16, 18, 23, 0.42);
+  --side-bg: rgba(16, 18, 23, 0.34);
+  --panel-bg: rgba(16, 18, 23, 0.5);
+  --surface: rgba(16, 18, 23, 0.68);
+  --surface-strong: rgba(21, 25, 34, 0.72);
+  --surface-soft: rgba(255, 255, 255, 0.085);
+  --mode-bg: rgba(255, 255, 255, 0.045);
+  --control-bg: rgba(255, 255, 255, 0.07);
+  --control-hover-bg: rgba(255, 255, 255, 0.115);
+  --pill-bg: rgba(255, 255, 255, 0.065);
+  --input-bg: rgba(0, 0, 0, 0.18);
+  --shadow: none;
+  --page-padding-block: 0px;
+  --page-padding-inline: 0px;
+  --shell-max-height: 100vh;
+}
+
+html[data-runtime="tauri"],
+html[data-runtime="tauri"] body {
+  background: transparent;
+}
+
+html[data-runtime="tauri"] body {
+  padding: 0;
+  overflow: hidden;
+}
+
+html[data-runtime="tauri"] .shell {
+  width: 100%;
+  height: 100vh;
+  height: 100svh;
+  border-radius: 16px;
+  background: var(--shell-bg);
+  -webkit-backdrop-filter: blur(34px) saturate(1.35);
+  backdrop-filter: blur(34px) saturate(1.35);
+}
+
+html[data-runtime="tauri"] .titlebar {
+  min-height: 62px;
+  grid-template-columns: 1fr auto;
+  gap: 14px;
+  padding-left: 86px;
+  padding-block: 10px;
+  background: var(--titlebar-bg);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+html[data-runtime="tauri"] .traffic-lights {
+  display: none;
+}
+
+html[data-runtime="tauri"] .brand {
+  gap: 9px;
+}
+
+html[data-runtime="tauri"] .brand-mark {
+  width: 32px;
+  height: 32px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+html[data-runtime="tauri"] .brand > div {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+html[data-runtime="tauri"] .eyebrow {
+  display: none;
+}
+
+html[data-runtime="tauri"] h1 {
+  margin: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.98rem;
+  font-weight: 720;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-runtime="tauri"] .side-panel,
+html[data-runtime="tauri"] .panel,
+html[data-runtime="tauri"] .ambient-summary,
+html[data-runtime="tauri"] .ambient-window {
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  backdrop-filter: blur(24px) saturate(1.2);
+}
+
+html[data-runtime="tauri"][data-theme="light"] {
+  --shell-bg: rgba(252, 253, 255, 0.68);
+  --titlebar-bg: rgba(252, 253, 255, 0.42);
+  --side-bg: rgba(252, 253, 255, 0.36);
+  --panel-bg: rgba(255, 255, 255, 0.58);
+  --surface: rgba(255, 255, 255, 0.7);
+  --surface-strong: rgba(248, 249, 252, 0.72);
+  --surface-soft: rgba(17, 19, 26, 0.06);
+}
+
+html[data-runtime="tauri"][data-theme="light"] .brand-mark {
+  background: rgba(255, 255, 255, 0.52);
+}
+
 /* App shell */
 .shell {
   display: grid;
@@ -1072,6 +1198,33 @@ body.is-running .status-pill {
 
   .utility-button.ambient-toggle {
     width: 100%;
+  }
+}
+
+/* Tauri keeps a fixed glass window; scroll the stacked content inside it. */
+@media (max-width: 860px) {
+  html[data-runtime="tauri"] .shell {
+    min-height: 0;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  html[data-runtime="tauri"] .timer-layout {
+    align-content: start;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  html[data-runtime="tauri"] .timer-stage {
+    min-height: clamp(460px, calc(100svh - 76px), 560px);
+  }
+
+  html[data-runtime="tauri"] .side-panel {
+    overflow: visible;
+    padding-bottom: max(28px, env(safe-area-inset-bottom));
   }
 }
 

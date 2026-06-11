@@ -138,6 +138,7 @@
 
   // Runs once after the deferred script loads and prepares the first render.
   function initialise() {
+    applyRuntime();
     rollTodayIfNeeded();
     restoreRunningTimer();
     applyTheme();
@@ -145,6 +146,51 @@
     bindEvents();
     render();
     setTicking(state.isRunning);
+  }
+
+  function applyRuntime() {
+    const params = new URLSearchParams(window.location.search);
+    const isTauri = params.get("runtime") === "tauri" || Boolean(window.__TAURI_INTERNALS__ || window.__TAURI__);
+    document.documentElement.dataset.runtime = isTauri ? "tauri" : "web";
+
+    if (isTauri) {
+      document.querySelector(".traffic-lights")?.remove();
+      bindTauriWindowDrag();
+    }
+  }
+
+  function bindTauriWindowDrag() {
+    const dragRegion = document.querySelector("[data-tauri-drag-region]");
+    if (!dragRegion || dragRegion.dataset.dragBound === "true") {
+      return;
+    }
+
+    dragRegion.dataset.dragBound = "true";
+    dragRegion.addEventListener("mousedown", (event) => {
+      if (event.button !== 0 || isInteractiveDragTarget(event.target)) {
+        return;
+      }
+
+      startTauriWindowDrag();
+    });
+  }
+
+  function isInteractiveDragTarget(target) {
+    return Boolean(target?.closest("button, input, select, textarea, a, label, [role='button']"));
+  }
+
+  function startTauriWindowDrag() {
+    try {
+      const tauriWindow = window.__TAURI__?.window;
+      const currentWindow = tauriWindow?.getCurrentWindow?.();
+      const dragResult = currentWindow?.startDragging?.() || tauriWindow?.appWindow?.startDragging?.();
+
+      if (dragResult && typeof dragResult.catch === "function") {
+        dragResult.catch(() => {});
+      }
+    } catch {
+      // The web version has no Tauri window API; this is intentionally a no-op.
+    }
   }
 
   // Connects UI controls, keyboard shortcuts, and browser events to app logic.

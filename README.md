@@ -2,6 +2,9 @@
 
 A minimalist dark theme interval timer that runs in any modern browser.
 
+The shared web app lives in `web/`. The macOS desktop wrapper lives in
+`src-tauri/`.
+
 ## Preview
 
 ![Undistracted Timer homepage screenshot](web/assets/undistracted-timer.png)
@@ -20,3 +23,20 @@ A minimalist dark theme interval timer that runs in any modern browser.
 ## Live Site
 
 https://timer.undistracted.dev/
+
+## Local Development
+
+```bash
+npm install
+npm run web:serve
+npm run desktop:dev
+```
+
+## Desktop Build
+
+```bash
+npm run desktop:build
+```
+
+The macOS `.app` and `.dmg` outputs are created under
+`src-tauri/target/release/bundle/`.

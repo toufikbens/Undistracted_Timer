@@ -16,6 +16,17 @@
     <link rel="icon" href="assets/app-icon.svg?v=2" type="image/svg+xml">
     <link rel="apple-touch-icon" href="assets/favicon.png?v=2">
 
+    <script>
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var isTauri = params.get("runtime") === "tauri" || Boolean(window.__TAURI_INTERNALS__ || window.__TAURI__);
+
+        if (isTauri) {
+          document.documentElement.dataset.runtime = "tauri";
+        }
+      })();
+    </script>
+
     <!-- Main stylesheet -->
     <link rel="stylesheet" href="styles.css?v=8">
   </head>
@@ -23,7 +34,7 @@
     <!-- App shell -->
     <main class="shell" aria-label="Undistracted Timer">
       <!-- Top bar: app identity, theme toggle, and timer status -->
-      <header class="titlebar">
+      <header class="titlebar" data-tauri-drag-region>
         <div class="traffic-lights" aria-hidden="true">
           <span class="light light-close"></span>
           <span class="light light-minimize"></span>
