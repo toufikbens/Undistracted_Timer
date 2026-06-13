@@ -662,8 +662,7 @@ h1 {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
-  min-height: 58px;
-  padding: 10px 14px;
+  padding: 12px 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--panel-bg);
@@ -1021,8 +1020,7 @@ body.is-running .status-pill {
   }
 
   .ambient-summary {
-    min-height: 50px;
-    padding: 8px 12px;
+    padding: 10px 12px;
   }
 
   .utility-button.subtle {
@@ -1042,8 +1040,7 @@ body.is-running .status-pill {
   }
 
   .ambient-summary {
-    min-height: 46px;
-    padding: 8px 10px;
+    padding: 10px 12px;
   }
 
   .setting-row input {
@@ -1089,9 +1086,12 @@ body.is-running .status-pill {
     padding-block: 10px;
   }
 
-  .panel,
-  .ambient-summary {
+  .panel {
     padding: 10px;
+  }
+
+  .ambient-summary {
+    padding: 12px;
   }
 
   .settings {
