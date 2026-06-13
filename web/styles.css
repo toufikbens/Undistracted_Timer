@@ -662,7 +662,7 @@ h1 {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
-  padding: 12px 14px;
+  padding: 10px 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--panel-bg);
@@ -1020,7 +1020,7 @@ body.is-running .status-pill {
   }
 
   .ambient-summary {
-    padding: 10px 12px;
+    padding: 8px 12px;
   }
 
   .utility-button.subtle {
@@ -1040,7 +1040,7 @@ body.is-running .status-pill {
   }
 
   .ambient-summary {
-    padding: 10px 12px;
+    padding: 8px 10px;
   }
 
   .setting-row input {
@@ -1091,7 +1091,7 @@ body.is-running .status-pill {
   }
 
   .ambient-summary {
-    padding: 12px;
+    padding: 10px;
   }
 
   .settings {
