@@ -244,7 +244,7 @@ html[data-runtime="tauri"][data-theme="light"] .brand-mark {
   background: rgba(255, 255, 255, 0.52);
 }
 
-html[data-runtime="tauri"] .download-button {
+html[data-runtime="tauri"] .download-link {
   display: none;
 }
 
@@ -564,22 +564,22 @@ h1 {
   background: var(--side-bg);
 }
 
-.download-button {
-  display: flex;
+.download-link {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 46px;
-  border-radius: var(--radius);
+  gap: 5px;
+  min-height: 38px;
+  padding: 0 12px;
   border: 1px solid var(--accent-border);
+  border-radius: 999px;
   background: var(--accent);
   color: var(--primary-text);
+  font-size: 0.82rem;
   font-weight: 650;
-  font-size: 0.9rem;
   text-decoration: none;
 }
 
-.download-button:hover {
+.download-link:hover {
   filter: brightness(1.12);
 }
 
@@ -1049,9 +1049,9 @@ body.is-running .status-pill {
     min-height: 38px;
   }
 
-  .download-button {
-    min-height: 42px;
-    font-size: 0.82rem;
+  .download-link {
+    min-height: 38px;
+    font-size: 0.76rem;
   }
 }
 
@@ -1082,9 +1082,9 @@ body.is-running .status-pill {
     min-height: 36px;
   }
 
-  .download-button {
-    min-height: 38px;
-    font-size: 0.82rem;
+  .download-link {
+    min-height: 34px;
+    font-size: 0.76rem;
   }
 }
 
