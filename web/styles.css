@@ -567,14 +567,14 @@ h1 {
 .download-link {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  min-height: 38px;
-  padding: 0 12px;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 20px;
   border: 1px solid var(--accent-border);
   border-radius: 999px;
   background: var(--accent);
   color: var(--primary-text);
-  font-size: 0.82rem;
+  font-size: 0.95rem;
   font-weight: 650;
   text-decoration: none;
 }
@@ -1050,8 +1050,9 @@ body.is-running .status-pill {
   }
 
   .download-link {
-    min-height: 38px;
-    font-size: 0.76rem;
+    min-height: 40px;
+    font-size: 0.82rem;
+    padding: 0 14px;
   }
 }
 
@@ -1083,8 +1084,9 @@ body.is-running .status-pill {
   }
 
   .download-link {
-    min-height: 34px;
-    font-size: 0.76rem;
+    min-height: 38px;
+    font-size: 0.82rem;
+    padding: 0 14px;
   }
 }
 
