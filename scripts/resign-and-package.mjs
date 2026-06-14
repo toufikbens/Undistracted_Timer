@@ -1,5 +1,5 @@
 import { execSync } from "child_process";
-import { existsSync, rmSync, mkdirSync, cpSync, symlinkSync } from "fs";
+import { existsSync, rmSync, mkdirSync, cpSync } from "fs";
 import { join } from "path";
 
 const ROOT = new URL("..", import.meta.url).pathname;
@@ -23,23 +23,28 @@ execSync(`codesign --force --deep --sign - "${APP_PATH}"`, { stdio: "inherit" })
 console.log("Verifying signature...");
 execSync(`codesign --verify --verbose "${APP_PATH}"`, { stdio: "inherit" });
 
-// 3. Rebuild DMG
-console.log("Rebuilding DMG...");
-const APP_IN_DMG = join(STAGING, `${APP_NAME}.app`);
-
-// Clean staging
+// 3. Stage the app
+console.log("Staging app...");
 if (existsSync(STAGING)) rmSync(STAGING, { recursive: true });
 mkdirSync(STAGING, { recursive: true });
+cpSync(APP_PATH, join(STAGING, `${APP_NAME}.app`), { recursive: true });
 
-cpSync(APP_PATH, APP_IN_DMG, { recursive: true });
-symlinkSync("/Applications", join(STAGING, "Applications"));
-
-// Remove stale DMG
+// 4. Rebuild DMG with nice window layout
+console.log("Rebuilding DMG...");
 if (existsSync(join(DMG_DIR, DMG_NAME))) rmSync(join(DMG_DIR, DMG_NAME));
 
 execSync(
-  `hdiutil create -volname "${APP_NAME}" -srcfolder "${STAGING}" -ov -format UDZO -imagekey zlib-level=9 "${join(DMG_DIR, DMG_NAME)}"`,
-  { stdio: "inherit" }
+  `create-dmg` +
+  ` --volname "${APP_NAME}"` +
+  ` --window-pos 200 120` +
+  ` --window-size 540 380` +
+  ` --icon-size 120` +
+  ` --icon "${APP_NAME}.app" 140 190` +
+  ` --app-drop-link 400 190` +
+  ` --no-internet-enable` +
+  ` "${join(DMG_DIR, DMG_NAME)}"` +
+  ` "${STAGING}"`,
+  { stdio: "inherit", shell: true }
 );
 
 // Cleanup
