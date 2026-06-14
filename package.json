@@ -6,8 +6,8 @@
   "scripts": {
     "web:serve": "python3 -m http.server 5173 --directory web",
     "desktop:dev": "tauri dev",
-    "desktop:build": "tauri build",
-    "desktop:release": "tauri build && node scripts/resign-and-package.mjs",
+    "desktop:build": "tauri build --target universal-apple-darwin",
+    "desktop:release": "tauri build --target universal-apple-darwin && node scripts/resign-and-package.mjs",
     "tauri": "tauri"
   },
   "devDependencies": {

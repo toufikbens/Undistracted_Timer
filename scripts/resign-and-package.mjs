@@ -5,9 +5,11 @@ import { join } from "path";
 const ROOT = new URL("..", import.meta.url).pathname;
 const APP_NAME = "Undistracted Timer";
 const VERSION = "0.1.0";
-const APP_PATH = join(ROOT, `src-tauri/target/release/bundle/macos/${APP_NAME}.app`);
+const UNIVERSAL_DIR = join(ROOT, "src-tauri/target/universal-apple-darwin/release");
+const APP_PATH = join(UNIVERSAL_DIR, `bundle/macos/${APP_NAME}.app`);
 const DMG_DIR = join(ROOT, "src-tauri/target/release/bundle/dmg");
-const DMG_NAME = `${APP_NAME}_${VERSION}_aarch64.dmg`;
+const DMG_NAME = `${APP_NAME}_${VERSION}_universal.dmg`;
+const DIST_DIR = join(ROOT, "dist");
 const STAGING = "/tmp/undistracted-dmg-staging";
 
 if (!existsSync(APP_PATH)) {
@@ -29,7 +31,7 @@ if (existsSync(STAGING)) rmSync(STAGING, { recursive: true });
 mkdirSync(STAGING, { recursive: true });
 cpSync(APP_PATH, join(STAGING, `${APP_NAME}.app`), { recursive: true });
 
-// 4. Rebuild DMG with nice window layout
+// 4. Rebuild DMG
 console.log("Rebuilding DMG...");
 if (existsSync(join(DMG_DIR, DMG_NAME))) rmSync(join(DMG_DIR, DMG_NAME));
 
@@ -47,7 +49,13 @@ execSync(
   { stdio: "inherit", shell: true }
 );
 
+// 5. Copy final artifacts to dist/
+console.log("Copying to dist/...");
+mkdirSync(DIST_DIR, { recursive: true });
+cpSync(APP_PATH, join(DIST_DIR, `${APP_NAME}.app`), { recursive: true });
+cpSync(join(DMG_DIR, DMG_NAME), join(DIST_DIR, DMG_NAME), { recursive: true });
+
 // Cleanup
 rmSync(STAGING, { recursive: true });
 
-console.log("Done. DMG rebuilt with valid ad-hoc signature.");
+console.log(`Done.\n  ${join(DIST_DIR, `${APP_NAME}.app`)}\n  ${join(DIST_DIR, DMG_NAME)}`);
