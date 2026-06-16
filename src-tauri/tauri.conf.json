@@ -7,7 +7,6 @@
     "frontendDist": "../web"
   },
   "app": {
-    "macOSPrivateApi": true,
     "withGlobalTauri": true,
     "windows": [
       {
@@ -21,20 +20,13 @@
         "center": true,
         "resizable": true,
         "decorations": true,
-        "transparent": true,
-        "shadow": true,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
         "trafficLightPosition": {
           "x": 18,
           "y": 18
         },
-        "backgroundThrottling": "disabled",
-        "windowEffects": {
-          "effects": ["underWindowBackground"],
-          "state": "active",
-          "radius": 16
-        }
+        "backgroundThrottling": "disabled"
       }
     ],
     "security": {
