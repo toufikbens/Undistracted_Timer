@@ -215,12 +215,6 @@ html[data-runtime="tauri"] h1 {
 }
 
 html[data-runtime="tauri"] .side-panel,
-html[data-runtime="tauri"] .panel,
-html[data-runtime="tauri"] .ambient-summary,
-html[data-runtime="tauri"] .ambient-window {
-  -webkit-backdrop-filter: blur(24px) saturate(1.2);
-  backdrop-filter: blur(24px) saturate(1.2);
-}
 
 html[data-runtime="tauri"][data-theme="light"] {
   --shell-bg: #f4f6fb;
