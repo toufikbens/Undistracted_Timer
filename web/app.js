@@ -1082,8 +1082,31 @@
     elements.themeToggleButton.title = label;
   }
 
-  // Ask the browser for notification permission and store the user's choice.
+  function isTauriAndroid() {
+    return document.documentElement.dataset.runtime === "android";
+  }
+
+  function tauriNotify() {
+    return window.__TAURI__?.core?.invoke;
+  }
+
+  // Ask for notification permission and store the user's choice.
   async function requestNotifications() {
+    if (isTauriAndroid()) {
+      try {
+        const invoke = tauriNotify();
+        const permission = await invoke("plugin:notification|request_permission");
+        state.settings.notifications = permission;
+        setTransientStatus(permission ? "Notifications on" : "Notifications off");
+        saveState();
+        updateNotificationButton();
+        return;
+      } catch {
+        setTransientStatus("Notifications off");
+        return;
+      }
+    }
+
     if (!("Notification" in window)) {
       setTransientStatus("Unsupported");
       state.settings.notifications = false;
@@ -1108,6 +1131,13 @@
 
   // Keep the notification button honest about browser support and permission.
   function updateNotificationButton() {
+    if (isTauriAndroid()) {
+      elements.notifyButton.textContent = state.settings.notifications
+        ? "Notifications enabled"
+        : "Enable notifications";
+      return;
+    }
+
     if (!("Notification" in window)) {
       elements.notifyButton.textContent = "Notifications unavailable";
       elements.notifyButton.disabled = true;
@@ -1123,7 +1153,7 @@
     }
   }
 
-  // Runs the completion feedback: sound first, then optional browser notification.
+  // Runs the completion feedback: sound first, then optional notification.
   function announceCompletion(completedMode) {
     const mode = modes[completedMode];
 
@@ -1131,11 +1161,25 @@
       playChime(completedMode);
     }
 
-    if (
-      state.settings.notifications &&
-      "Notification" in window &&
-      Notification.permission === "granted"
-    ) {
+    if (!state.settings.notifications) {
+      return;
+    }
+
+    if (isTauriAndroid()) {
+      try {
+        const invoke = tauriNotify();
+        invoke("plugin:notification|notify", {
+          title: mode.completeTitle,
+          body: mode.completeMessage,
+          icon: "assets/app-icon.svg"
+        });
+      } catch {
+        // silently fail
+      }
+      return;
+    }
+
+    if ("Notification" in window && Notification.permission === "granted") {
       new Notification(mode.completeTitle, {
         body: mode.completeMessage,
         icon: "assets/app-icon.svg",

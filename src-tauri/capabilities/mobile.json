@@ -3,5 +3,5 @@
   "description": "Permissions for mobile (Android) usage.",
   "windows": ["main"],
   "platforms": ["android"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "notification:default"]
 }
