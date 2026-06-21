@@ -214,8 +214,6 @@ html[data-runtime="tauri"] h1 {
   white-space: nowrap;
 }
 
-html[data-runtime="tauri"] .side-panel,
-
 html[data-runtime="tauri"][data-theme="light"] {
   --shell-bg: #f4f6fb;
   --titlebar-bg: #eef1f8;
