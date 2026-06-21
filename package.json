@@ -8,6 +8,9 @@
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build --target universal-apple-darwin",
     "desktop:release": "tauri build --target universal-apple-darwin && node scripts/resign-and-package.mjs",
+    "android:dev": "tauri android dev",
+    "android:build": "tauri android build --debug",
+    "android:release": "tauri android build --target aarch64",
     "tauri": "tauri"
   },
   "devDependencies": {

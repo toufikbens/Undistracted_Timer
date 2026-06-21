@@ -234,6 +234,102 @@ html[data-runtime="tauri"] .download-link {
   display: none;
 }
 
+/* Android runtime overrides */
+html[data-runtime="android"] {
+  --page-padding-block: 0px;
+  --page-padding-inline: 0px;
+  --shell-max-height: 100vh;
+  --shell-bg: #08090c;
+  --titlebar-bg: #08090c;
+  --side-bg: #08090c;
+  --panel-bg: #101217;
+  --surface: #101217;
+  --surface-strong: #151922;
+  --surface-soft: rgba(255, 255, 255, 0.06);
+}
+
+html[data-runtime="android"][data-theme="light"] {
+  --shell-bg: #f4f6fb;
+  --titlebar-bg: #f4f6fb;
+  --side-bg: #f4f6fb;
+  --panel-bg: #ffffff;
+  --surface: #ffffff;
+  --surface-strong: #f8f9fc;
+  --surface-soft: rgba(17, 19, 26, 0.055);
+}
+
+html[data-runtime="android"] body {
+  padding: 0;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+html[data-runtime="android"] .shell {
+  width: 100%;
+  height: 100vh;
+  height: 100svh;
+  border: 0;
+  border-radius: 0;
+  background: var(--shell-bg);
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+html[data-runtime="android"] .titlebar {
+  min-height: 62px;
+  grid-template-columns: 1fr auto;
+  gap: 14px;
+  padding-inline: 22px;
+  padding-block: 10px;
+  background: var(--titlebar-bg);
+  padding-top: max(10px, env(safe-area-inset-top));
+}
+
+html[data-runtime="android"] .traffic-lights {
+  display: none;
+}
+
+html[data-runtime="android"] .brand {
+  gap: 9px;
+}
+
+html[data-runtime="android"] .brand-mark {
+  width: 32px;
+  height: 32px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+html[data-runtime="android"] .brand > div {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+html[data-runtime="android"] .eyebrow {
+  display: none;
+}
+
+html[data-runtime="android"] h1 {
+  margin: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.98rem;
+  font-weight: 720;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-runtime="android"] .download-link {
+  display: none;
+}
+
+html[data-runtime="android"] .side-panel {
+  padding-bottom: max(28px, env(safe-area-inset-bottom));
+}
+
 /* App shell */
 .shell {
   display: grid;
@@ -1304,6 +1400,33 @@ body.is-running .status-pill {
   }
 
   html[data-runtime="tauri"] .side-panel {
+    overflow: visible;
+    padding-bottom: max(28px, env(safe-area-inset-bottom));
+  }
+}
+
+/* Android narrow layout (pairs with the same phone breakpoints) */
+@media (max-width: 860px) {
+  html[data-runtime="android"] .shell {
+    min-height: 0;
+    border: 0;
+    border-radius: 0;
+    overflow: hidden;
+  }
+
+  html[data-runtime="android"] .timer-layout {
+    align-content: start;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  html[data-runtime="android"] .timer-stage {
+    min-height: clamp(460px, calc(100svh - 76px), 560px);
+  }
+
+  html[data-runtime="android"] .side-panel {
     overflow: visible;
     padding-bottom: max(28px, env(safe-area-inset-bottom));
   }

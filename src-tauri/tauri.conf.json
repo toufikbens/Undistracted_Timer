@@ -30,7 +30,7 @@
       }
     ],
     "security": {
-      "capabilities": ["default"]
+      "capabilities": ["default", "mobile"]
     }
   },
   "bundle": {
@@ -39,6 +39,11 @@
     "copyright": "Copyright 2026 Toufik Bens",
     "shortDescription": "A quiet interval timer for focused work.",
     "longDescription": "Undistracted Timer is a minimalist timer for focused work sessions, intentional breaks, and gentle ambient sound.",
-    "icon": ["../web/assets/favicon.png"]
+    "icon": [
+      "../web/assets/favicon.png"
+    ],
+    "android": {
+      "minSdkVersion": 26
+    }
   }
 }

@@ -151,9 +151,10 @@
   function applyRuntime() {
     const params = new URLSearchParams(window.location.search);
     const isTauri = params.get("runtime") === "tauri" || Boolean(window.__TAURI_INTERNALS__ || window.__TAURI__);
-    document.documentElement.dataset.runtime = isTauri ? "tauri" : "web";
+    const isAndroid = isTauri && /android/i.test(navigator.userAgent);
+    document.documentElement.dataset.runtime = isTauri ? (isAndroid ? "android" : "tauri") : "web";
 
-    if (isTauri) {
+    if (isTauri && !isAndroid) {
       document.querySelector(".traffic-lights")?.remove();
       bindTauriWindowDrag();
     }
@@ -190,6 +191,22 @@
       }
     } catch {
       // The web version has no Tauri window API; this is intentionally a no-op.
+    }
+  }
+
+  function listenAndroidBackButton() {
+    if (document.documentElement.dataset.runtime !== "android") {
+      return;
+    }
+
+    const tauriEvent = window.__TAURI__?.event;
+    if (tauriEvent) {
+      tauriEvent.listen("tauri://back-requested", (event) => {
+        if (!elements.ambientOverlay.hidden) {
+          closeAmbientDialog();
+          event.preventDefault();
+        }
+      });
     }
   }
 
@@ -236,6 +253,8 @@
     elements.notifyButton.addEventListener("click", requestNotifications);
     elements.clearStatsButton.addEventListener("click", clearFocusStats);
     elements.themeToggleButton.addEventListener("click", toggleTheme);
+
+    listenAndroidBackButton();
 
     document.addEventListener("visibilitychange", () => {
       if (state.isRunning) {
