@@ -654,11 +654,12 @@
     render();
   }
 
-  // Clear only today's focus counters; timer and preferences stay intact.
+  // Clear today's focus counters and reset the cycle position.
   function clearFocusStats() {
     rollTodayIfNeeded();
     state.todayFocusSessions = 0;
     state.todayFocusMinutes = 0;
+    state.completedInCycle = 0;
     saveState();
     render();
     setTransientStatus("Stats cleared");
