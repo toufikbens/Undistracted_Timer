@@ -1321,7 +1321,7 @@
 
     elements.todayMetric.textContent = pluralise(state.todayFocusSessions, "focus session");
     elements.minutesMetric.textContent = `${state.todayFocusMinutes} min`;
-    elements.clearStatsButton.disabled = state.todayFocusSessions === 0 && state.todayFocusMinutes === 0;
+    elements.clearStatsButton.disabled = state.todayFocusSessions === 0 && state.todayFocusMinutes === 0 && state.completedInCycle === 0;
     renderAmbientControls();
     renderStatus();
   }
