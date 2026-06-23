@@ -45,27 +45,11 @@ class TimerService : Service() {
     }
 
     private var running = false
-    private var remainingSecs = 0L
+    private var endAtMs = 0L
     private var totalSecs = 0L
     private var timerLabel = "Focus"
     private val handler = Handler(Looper.getMainLooper())
     private var appIntent: PendingIntent? = null
-
-    private val tick = object : Runnable {
-        override fun run() {
-            if (!running) return
-            remainingSecs = maxOf(0, remainingSecs - 1)
-            updateNotification()
-            if (remainingSecs <= 0) {
-                running = false
-                stopForeground(STOP_FOREGROUND_DETACH)
-                showCompletionNotification()
-                stopSelf()
-                return
-            }
-            handler.postDelayed(this, 1000)
-        }
-    }
 
     override fun onCreate() {
         super.onCreate()
@@ -83,13 +67,13 @@ class TimerService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START -> {
+                endAtMs = intent.getLongExtra("end_at_ms", 0)
                 totalSecs = intent.getLongExtra("total_secs", 0)
-                remainingSecs = maxOf(0, (intent.getLongExtra("end_at_ms", 0) - System.currentTimeMillis()) / 1000)
                 timerLabel = intent.getStringExtra("label") ?: "Focus"
                 running = true
                 handler.removeCallbacks(tick)
                 appIntent = buildPendingIntent()
-                startForeground(NOTIFICATION_ID, buildNotification())
+                startForeground(NOTIFICATION_ID, buildNotification(currentRemaining()))
                 handler.post(tick)
             }
             ACTION_STOP -> {
@@ -106,6 +90,29 @@ class TimerService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    private fun currentRemaining(): Int {
+        val remaining = (endAtMs - System.currentTimeMillis()) / 1000
+        return maxOf(0, remaining.toInt())
+    }
+
+    private val tick = object : Runnable {
+        override fun run() {
+            if (!running) return
+
+            val remaining = currentRemaining()
+            updateNotification(remaining)
+
+            if (remaining <= 0) {
+                running = false
+                stopForeground(STOP_FOREGROUND_DETACH)
+                showCompletionNotification()
+                stopSelf()
+                return
+            }
+            handler.postDelayed(this, 1000)
+        }
+    }
+
     private fun buildPendingIntent(): PendingIntent {
         val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
         return PendingIntent.getActivity(
@@ -114,22 +121,22 @@ class TimerService : Service() {
         )
     }
 
-    private fun buildNotification(): Notification {
+    private fun buildNotification(remaining: Int): Notification {
         val iconRes = packageManager.getApplicationInfo(packageName, 0).icon
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(iconRes)
             .setContentTitle(timerLabel)
-            .setContentText(formatTime(remainingSecs))
+            .setContentText(formatTime(remaining.toLong()))
             .setOngoing(true)
             .setContentIntent(appIntent)
-            .setProgress(totalSecs.toInt(), remainingSecs.toInt(), false)
+            .setProgress(totalSecs.toInt(), remaining, false)
             .setOnlyAlertOnce(true)
             .build()
     }
 
-    private fun updateNotification() {
+    private fun updateNotification(remaining: Int) {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(NOTIFICATION_ID, buildNotification())
+        manager.notify(NOTIFICATION_ID, buildNotification(remaining))
     }
 
     private fun showCompletionNotification() {
