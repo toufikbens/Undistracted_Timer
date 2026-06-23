@@ -135,8 +135,9 @@ class TimerService : Service() {
     }
 
     private fun updateNotification(remaining: Int) {
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(NOTIFICATION_ID, buildNotification(remaining))
+        // Use startForeground() instead of NotificationManager.notify() so
+        // aggressive OEM skins (OnePlus/OxygenOS) actually refresh the UI.
+        startForeground(NOTIFICATION_ID, buildNotification(remaining))
     }
 
     private fun showCompletionNotification() {
