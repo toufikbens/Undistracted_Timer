@@ -17,24 +17,12 @@ class TimerService : Service() {
     companion object {
         const val CHANNEL_ID = "timer_countdown"
         const val NOTIFICATION_ID = 1001
-        const val DONE_NOTIFICATION_ID = 1002
         const val ACTION_START = "start"
         const val ACTION_STOP = "stop"
 
-        var isRunning = false
-        private var handler: Handler? = null
-        private var updateRunnable: Runnable? = null
-
-        var remainingSeconds = 0L
-        var totalSeconds = 0L
-        var modeLabel = "Focus"
+        private var instance: TimerService? = null
 
         fun start(context: Context, endAtMs: Long, totalSecs: Long, label: String) {
-            totalSeconds = totalSecs
-            remainingSeconds = maxOf(0, (endAtMs - System.currentTimeMillis()) / 1000)
-            modeLabel = label
-            isRunning = true
-
             val intent = Intent(context, TimerService::class.java)
             intent.action = ACTION_START
             intent.putExtra("end_at_ms", endAtMs)
@@ -49,62 +37,112 @@ class TimerService : Service() {
         }
 
         fun stop(context: Context) {
-            isRunning = false
-            handler?.removeCallbacks(updateRunnable ?: return)
-
+            instance?.requestStop()
             val intent = Intent(context, TimerService::class.java)
             intent.action = ACTION_STOP
             context.startService(intent)
         }
     }
 
-    private val mainHandler = Handler(Looper.getMainLooper())
+    private var running = false
+    private var remainingSecs = 0L
+    private var totalSecs = 0L
+    private var timerLabel = "Focus"
+    private val handler = Handler(Looper.getMainLooper())
+    private var appIntent: PendingIntent? = null
+
+    private val tick = object : Runnable {
+        override fun run() {
+            if (!running) return
+            remainingSecs = maxOf(0, remainingSecs - 1)
+            updateNotification()
+            if (remainingSecs <= 0) {
+                running = false
+                stopForeground(STOP_FOREGROUND_DETACH)
+                showCompletionNotification()
+                stopSelf()
+                return
+            }
+            handler.postDelayed(this, 1000)
+        }
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        instance = this
+        createChannel()
+    }
+
+    override fun onDestroy() {
+        handler.removeCallbacks(tick)
+        running = false
+        instance = null
+        super.onDestroy()
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START -> {
-                val endAtMs = intent.getLongExtra("end_at_ms", 0)
-                val totalSecs = intent.getLongExtra("total_secs", 0)
-                val label = intent.getStringExtra("label") ?: "Timer"
-                totalSeconds = totalSecs
-                remainingSeconds = maxOf(0, (endAtMs - System.currentTimeMillis()) / 1000)
-                modeLabel = label
-                isRunning = true
-                createNotificationChannel()
+                totalSecs = intent.getLongExtra("total_secs", 0)
+                remainingSecs = maxOf(0, (intent.getLongExtra("end_at_ms", 0) - System.currentTimeMillis()) / 1000)
+                timerLabel = intent.getStringExtra("label") ?: "Focus"
+                running = true
+                handler.removeCallbacks(tick)
+                appIntent = buildPendingIntent()
                 startForeground(NOTIFICATION_ID, buildNotification())
-                startCountdown()
+                handler.post(tick)
             }
             ACTION_STOP -> {
-                stopCountdown()
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf()
+                requestStop()
             }
         }
         return START_STICKY
     }
 
-    private fun startCountdown() {
-        stopCountdown()
-        updateRunnable = object : Runnable {
-            override fun run() {
-                if (!isRunning) return
-                remainingSeconds = maxOf(0, remainingSeconds - 1)
-                updateNotification()
-                if (remainingSeconds <= 0) {
-                    stopCountdown()
-                    stopForeground(STOP_FOREGROUND_DETACH)
-                    showCompletionNotification()
-                    stopSelf()
-                    return
-                }
-                mainHandler.postDelayed(this, 1000)
-            }
-        }
-        mainHandler.post(updateRunnable!!)
+    fun requestStop() {
+        handler.removeCallbacks(tick)
+        running = false
     }
 
-    private fun stopCountdown() {
-        updateRunnable?.let { mainHandler.removeCallbacks(it) }
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    private fun buildPendingIntent(): PendingIntent {
+        val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
+        return PendingIntent.getActivity(
+            this, 0, launchIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    private fun buildNotification(): Notification {
+        val iconRes = packageManager.getApplicationInfo(packageName, 0).icon
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(iconRes)
+            .setContentTitle(timerLabel)
+            .setContentText(formatTime(remainingSecs))
+            .setOngoing(true)
+            .setContentIntent(appIntent)
+            .setProgress(totalSecs.toInt(), remainingSecs.toInt(), false)
+            .setOnlyAlertOnce(true)
+            .build()
+    }
+
+    private fun updateNotification() {
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(NOTIFICATION_ID, buildNotification())
+    }
+
+    private fun showCompletionNotification() {
+        val iconRes = packageManager.getApplicationInfo(packageName, 0).icon
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(iconRes)
+            .setContentTitle("${timerLabel} complete")
+            .setContentText("Tap to open")
+            .setAutoCancel(true)
+            .setContentIntent(appIntent)
+            .build()
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(NOTIFICATION_ID, notification)
     }
 
     private fun formatTime(seconds: Long): String {
@@ -113,60 +151,16 @@ class TimerService : Service() {
         return "${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}"
     }
 
-    private fun buildNotification(): Notification {
-        val appIntent = packageManager.getLaunchIntentForPackage(packageName)
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0, appIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(modeLabel)
-            .setContentText(formatTime(remainingSeconds))
-            .setSmallIcon(android.R.drawable.ic_popup_reminder)
-            .setOngoing(true)
-            .setContentIntent(pendingIntent)
-            .setProgress(totalSeconds.toInt(), remainingSeconds.toInt(), false)
-            .build()
-    }
-
-    private fun updateNotification() {
-        val notification = buildNotification()
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(NOTIFICATION_ID, notification)
-    }
-
-    private fun showCompletionNotification() {
-        val appIntent = packageManager.getLaunchIntentForPackage(packageName)
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0, appIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("${modeLabel} complete")
-            .setContentText("Tap to open")
-            .setSmallIcon(android.R.drawable.ic_popup_reminder)
-            .setAutoCancel(true)
-            .setContentIntent(pendingIntent)
-            .build()
-
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(DONE_NOTIFICATION_ID, notification)
-    }
-
-    private fun createNotificationChannel() {
+    private fun createChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Timer countdown",
+                "Timer",
                 NotificationManager.IMPORTANCE_LOW
             )
-            channel.description = "Shows the timer countdown"
+            channel.description = "Ongoing timer countdown"
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
         }
     }
-
-    override fun onBind(intent: Intent?): IBinder? = null
 }
