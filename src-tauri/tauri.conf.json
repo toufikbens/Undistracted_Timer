@@ -25,8 +25,7 @@
         "trafficLightPosition": {
           "x": 18,
           "y": 18
-        },
-        "backgroundThrottling": "disabled"
+        }
       }
     ],
     "security": {

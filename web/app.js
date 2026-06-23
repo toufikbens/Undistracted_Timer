@@ -95,6 +95,7 @@
   let audioContext = null;
   let wakeLock = null;
   let lastAmbientTrigger = null;
+  let autoStartHandle = null;
   let ambientState = {
     tracks: {}
   };
@@ -446,7 +447,7 @@
       state.isRunning = false;
       state.endAt = null;
       state.currentDuration = state.currentDuration || modeDuration(state.mode);
-      state.remaining = clampRemaining(state.remaining || modeDuration(state.mode));
+      state.remaining = clampRemaining(state.remaining);
       return;
     }
 
@@ -505,6 +506,13 @@
     }
   }
 
+  function clearAutoStart() {
+    if (autoStartHandle !== null) {
+      window.clearTimeout(autoStartHandle);
+      autoStartHandle = null;
+    }
+  }
+
   function toggleTimer() {
     if (state.isRunning) {
       pauseTimer();
@@ -534,6 +542,7 @@
 
   // Pauses by converting the absolute end time back into remaining seconds.
   function pauseTimer() {
+    clearAutoStart();
     state.remaining = secondsRemaining();
     state.isRunning = false;
     state.endAt = null;
@@ -546,6 +555,7 @@
 
   // Resets the current mode to its configured duration without changing modes.
   function resetTimer() {
+    clearAutoStart();
     state.isRunning = false;
     state.endAt = null;
     state.currentDuration = modeDuration(state.mode);
@@ -563,6 +573,7 @@
       return;
     }
 
+    clearAutoStart();
     state.mode = nextMode;
     state.isRunning = false;
     state.endAt = null;
@@ -578,6 +589,7 @@
   // Shared completion flow for real timer endings and manual skips.
   // counted controls whether focus stats increase; automatic controls alerts.
   function finishMode({ counted, automatic }) {
+    clearAutoStart();
     const completedMode = state.mode;
     const shouldCountFocus = counted && completedMode === "focus";
 
@@ -605,7 +617,7 @@
     }
 
     if (automatic && state.settings.autoStart) {
-      window.setTimeout(startTimer, 700);
+      autoStartHandle = window.setTimeout(startTimer, 700);
     }
   }
 
@@ -1173,6 +1185,7 @@
   // Keep the notification button honest about browser support and permission.
   function updateNotificationButton() {
     if (isTauriAndroid()) {
+      elements.notifyButton.disabled = false;
       elements.notifyButton.textContent = state.settings.notifications
         ? "Notifications enabled"
         : "Enable notifications";
@@ -1213,7 +1226,7 @@
           title: mode.completeTitle,
           body: mode.completeMessage,
           icon: "assets/app-icon.svg"
-        });
+        }).catch(function () {});
       } catch {
         // silently fail
       }
