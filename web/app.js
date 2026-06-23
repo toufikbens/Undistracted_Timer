@@ -257,9 +257,16 @@
     listenAndroidBackButton();
 
     document.addEventListener("visibilitychange", () => {
-      if (state.isRunning) {
-        render();
+      if (!state.isRunning) {
+        return;
       }
+
+      if (secondsRemaining() <= 0) {
+        finishMode({ counted: true, automatic: true });
+        return;
+      }
+
+      render();
     });
 
     document.addEventListener("keydown", (event) => {
@@ -469,7 +476,31 @@
     updateThemeButton();
   }
 
-  // The main Start/Pause button delegates to the right timer action.
+  function scheduleTimerNotification() {
+    if (!isTauriAndroid()) {
+      return;
+    }
+
+    const mode = modes[state.mode];
+    const delay = Math.max(0, state.endAt - Date.now());
+
+    if (delay < 1000) {
+      return;
+    }
+
+    try {
+      const invoke = tauriNotify();
+      invoke("plugin:notification|notify", {
+        title: mode.completeTitle,
+        body: mode.completeMessage,
+        icon: "assets/app-icon.svg",
+        schedule: { after: delay }
+      });
+    } catch {
+      // scheduling not supported on this platform
+    }
+  }
+
   function toggleTimer() {
     if (state.isRunning) {
       pauseTimer();
@@ -492,6 +523,7 @@
     state.endAt = Date.now() + state.remaining * 1000;
     setTicking(true);
     requestWakeLock();
+    scheduleTimerNotification();
     saveState();
     render();
   }
