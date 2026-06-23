@@ -481,23 +481,27 @@
       return;
     }
 
-    const mode = modes[state.mode];
-    const delay = Math.max(0, state.endAt - Date.now());
-
-    if (delay < 1000) {
+    const bridge = window.TimerBridge;
+    if (!bridge) {
       return;
     }
 
     try {
-      const invoke = tauriNotify();
-      invoke("plugin:notification|notify", {
-        title: mode.completeTitle,
-        body: mode.completeMessage,
-        icon: "assets/app-icon.svg",
-        schedule: { after: delay }
-      });
+      bridge.timerStart(state.endAt, state.currentDuration, modes[state.mode].label);
     } catch {
-      // scheduling not supported on this platform
+      // bridge not available
+    }
+  }
+
+  function stopTimerNotification() {
+    if (!isTauriAndroid()) {
+      return;
+    }
+
+    try {
+      window.TimerBridge?.timerStop();
+    } catch {
+      // bridge not available
     }
   }
 
@@ -535,6 +539,7 @@
     state.endAt = null;
     setTicking(false);
     releaseWakeLock();
+    stopTimerNotification();
     saveState();
     render();
   }
@@ -547,6 +552,7 @@
     state.remaining = state.currentDuration;
     setTicking(false);
     releaseWakeLock();
+    stopTimerNotification();
     saveState();
     render();
   }
@@ -564,6 +570,7 @@
     state.remaining = state.currentDuration;
     setTicking(false);
     releaseWakeLock();
+    stopTimerNotification();
     saveState();
     render();
   }
@@ -589,6 +596,7 @@
     state.endAt = null;
     setTicking(false);
     releaseWakeLock();
+    stopTimerNotification();
     saveState();
     render();
 
