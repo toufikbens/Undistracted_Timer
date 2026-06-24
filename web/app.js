@@ -488,33 +488,21 @@
     }
 
     try {
-      const nextMode = modeAfter(state.mode);
-      const nextDuration = modeDuration(nextMode);
-      const autoStart = Boolean(state.settings.autoStart);
-      const focusEndAt = state.endAt;
-      const nextStartAt = focusEndAt + 700;
-      const nextEndAt = nextStartAt + nextDuration * 1000;
-
       bridge.timerStart(
         state.endAt,
         state.currentDuration,
         modes[state.mode].label,
-        autoStart,
-        nextEndAt,
-        nextDuration,
-        modes[nextMode].label
+        state.mode,
+        Boolean(state.settings.autoStart),
+        durationFor("focus", state.settings),
+        durationFor("short", state.settings),
+        durationFor("long", state.settings),
+        state.settings.longEvery,
+        state.completedInCycle
       );
     } catch {
       // bridge not available
     }
-  }
-
-  function modeAfter(mode) {
-    if (mode === "focus") {
-      const nextCycle = (state.completedInCycle + 1) % state.settings.longEvery;
-      return nextCycle === 0 ? "long" : "short";
-    }
-    return "focus";
   }
 
   function stopTimerNotification() {

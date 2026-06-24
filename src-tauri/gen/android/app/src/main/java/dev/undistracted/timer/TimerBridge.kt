@@ -9,14 +9,17 @@ class TimerBridge(private val context: Context) {
         endAtMs: Long,
         totalSecs: Long,
         label: String,
+        mode: String,
         autoStart: Boolean,
-        nextEndAtMs: Long,
-        nextTotalSecs: Long,
-        nextLabel: String
+        focusSecs: Long,
+        shortSecs: Long,
+        longSecs: Long,
+        longEvery: Int,
+        completedInCycle: Int
     ) {
         TimerService.start(
-            context, endAtMs, totalSecs, label,
-            autoStart, nextEndAtMs, nextTotalSecs, nextLabel
+            context, endAtMs, totalSecs, label, mode, autoStart,
+            focusSecs, shortSecs, longSecs, longEvery, completedInCycle
         )
     }
 

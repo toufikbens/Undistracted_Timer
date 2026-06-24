@@ -1,6 +1,5 @@
 package dev.undistracted.timer
 
-import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -19,7 +18,6 @@ class TimerService : Service() {
         const val CHANNEL_ID = "timer_countdown"
         const val ALERT_CHANNEL_ID = "timer_alerts"
         const val NOTIFICATION_ID = 1001
-        const val ALARM_REQUEST_CODE = 2001
         const val ACTION_START = "start"
         const val ACTION_STOP = "stop"
 
@@ -30,20 +28,26 @@ class TimerService : Service() {
             endAtMs: Long,
             totalSecs: Long,
             label: String,
-            autoStart: Boolean = false,
-            nextEndAtMs: Long = 0,
-            nextTotalSecs: Long = 0,
-            nextLabel: String = "Focus"
+            mode: String,
+            autoStart: Boolean,
+            focusSecs: Long,
+            shortSecs: Long,
+            longSecs: Long,
+            longEvery: Int,
+            completedInCycle: Int
         ) {
             val intent = Intent(context, TimerService::class.java)
             intent.action = ACTION_START
             intent.putExtra("end_at_ms", endAtMs)
             intent.putExtra("total_secs", totalSecs)
             intent.putExtra("label", label)
+            intent.putExtra("mode", mode)
             intent.putExtra("auto_start", autoStart)
-            intent.putExtra("next_end_at_ms", nextEndAtMs)
-            intent.putExtra("next_total_secs", nextTotalSecs)
-            intent.putExtra("next_label", nextLabel)
+            intent.putExtra("focus_secs", focusSecs)
+            intent.putExtra("short_secs", shortSecs)
+            intent.putExtra("long_secs", longSecs)
+            intent.putExtra("long_every", longEvery)
+            intent.putExtra("completed_in_cycle", completedInCycle)
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
@@ -64,13 +68,17 @@ class TimerService : Service() {
     private var endAtMs = 0L
     private var totalSecs = 0L
     private var timerLabel = "Focus"
+    private var currentMode = "focus"
     private var autoStart = false
-    private var nextEndAtMs = 0L
-    private var nextTotalSecs = 0L
-    private var nextLabel = "Focus"
+    private var focusSecs = 0L
+    private var shortSecs = 0L
+    private var longSecs = 0L
+    private var longEvery = 4
+    private var completedInCycle = 0
+
     private val handler = Handler(Looper.getMainLooper())
     private var appIntent: PendingIntent? = null
-    private var nextAlarmIntent: PendingIntent? = null
+    private var pendingNextRunnable: Runnable? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -80,7 +88,7 @@ class TimerService : Service() {
 
     override fun onDestroy() {
         handler.removeCallbacks(tick)
-        cancelNextAlarm()
+        pendingNextRunnable?.let { handler.removeCallbacks(it) }
         running = false
         instance = null
         super.onDestroy()
@@ -92,13 +100,20 @@ class TimerService : Service() {
                 endAtMs = intent.getLongExtra("end_at_ms", 0)
                 totalSecs = intent.getLongExtra("total_secs", 0)
                 timerLabel = intent.getStringExtra("label") ?: "Focus"
+                currentMode = intent.getStringExtra("mode") ?: "focus"
                 autoStart = intent.getBooleanExtra("auto_start", false)
-                nextEndAtMs = intent.getLongExtra("next_end_at_ms", 0)
-                nextTotalSecs = intent.getLongExtra("next_total_secs", 0)
-                nextLabel = intent.getStringExtra("next_label") ?: "Focus"
+                focusSecs = intent.getLongExtra("focus_secs", 0)
+                shortSecs = intent.getLongExtra("short_secs", 0)
+                longSecs = intent.getLongExtra("long_secs", 0)
+                longEvery = intent.getIntExtra("long_every", 4)
+                completedInCycle = intent.getIntExtra("completed_in_cycle", 0)
+
                 running = true
                 handler.removeCallbacks(tick)
-                cancelNextAlarm()
+                pendingNextRunnable?.let {
+                    handler.removeCallbacks(it)
+                    pendingNextRunnable = null
+                }
                 appIntent = buildPendingIntent()
                 startForeground(NOTIFICATION_ID, buildNotification(currentRemaining()))
                 handler.post(tick)
@@ -112,8 +127,12 @@ class TimerService : Service() {
 
     fun requestStop() {
         handler.removeCallbacks(tick)
+        pendingNextRunnable?.let {
+            handler.removeCallbacks(it)
+            pendingNextRunnable = null
+        }
         running = false
-        cancelNextAlarm()
+        autoStart = false
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -135,15 +154,64 @@ class TimerService : Service() {
             if (remaining <= 0) {
                 running = false
                 handler.removeCallbacks(this)
-                stopForeground(STOP_FOREGROUND_DETACH)
-                showCompletionNotification()
-                if (autoStart && nextEndAtMs > 0) {
-                    scheduleNextAlarm()
-                }
-                stopSelf()
+                onTimerComplete()
                 return
             }
             handler.postDelayed(this, 1000)
+        }
+    }
+
+    private fun onTimerComplete() {
+        if (currentMode == "focus") {
+            completedInCycle = (completedInCycle + 1) % longEvery
+        }
+
+        if (autoStart) {
+            startForeground(NOTIFICATION_ID, buildCompletionNotification())
+            val nextMode = computeNextMode()
+            val runnable = Runnable { startNextSegment(nextMode) }
+            pendingNextRunnable = runnable
+            handler.postDelayed(runnable, 700)
+        } else {
+            stopForeground(STOP_FOREGROUND_DETACH)
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.notify(NOTIFICATION_ID, buildCompletionNotification())
+            stopSelf()
+        }
+    }
+
+    private fun startNextSegment(nextMode: String) {
+        pendingNextRunnable = null
+        currentMode = nextMode
+        totalSecs = durationForMode(nextMode)
+        timerLabel = labelForMode(nextMode)
+        endAtMs = System.currentTimeMillis() + totalSecs * 1000
+        running = true
+        startForeground(NOTIFICATION_ID, buildNotification(currentRemaining()))
+        handler.post(tick)
+    }
+
+    private fun computeNextMode(): String {
+        return if (currentMode == "focus") {
+            if (completedInCycle == 0) "long" else "short"
+        } else {
+            "focus"
+        }
+    }
+
+    private fun durationForMode(mode: String): Long {
+        return when (mode) {
+            "short" -> shortSecs
+            "long" -> longSecs
+            else -> focusSecs
+        }
+    }
+
+    private fun labelForMode(mode: String): String {
+        return when (mode) {
+            "short" -> "Short break"
+            "long" -> "Long break"
+            else -> "Focus"
         }
     }
 
@@ -168,57 +236,19 @@ class TimerService : Service() {
             .build()
     }
 
-    private fun updateNotification(remaining: Int) {
-        // Use startForeground() instead of NotificationManager.notify() so
-        // aggressive OEM skins (OnePlus/OxygenOS) actually refresh the UI.
-        startForeground(NOTIFICATION_ID, buildNotification(remaining))
-    }
-
-    private fun showCompletionNotification() {
+    private fun buildCompletionNotification(): Notification {
         val iconRes = packageManager.getApplicationInfo(packageName, 0).icon
-        val notification = NotificationCompat.Builder(this, ALERT_CHANNEL_ID)
+        return NotificationCompat.Builder(this, ALERT_CHANNEL_ID)
             .setSmallIcon(iconRes)
             .setContentTitle("${timerLabel} complete")
             .setContentText("Tap to open")
             .setAutoCancel(true)
             .setContentIntent(appIntent)
             .build()
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(NOTIFICATION_ID, notification)
     }
 
-    private fun scheduleNextAlarm() {
-        val pending = PendingIntent.getBroadcast(
-            this,
-            ALARM_REQUEST_CODE,
-            TimerAlarmReceiver.buildIntent(
-                this,
-                nextEndAtMs,
-                nextTotalSecs,
-                nextLabel,
-                autoStart,
-                0,
-                0,
-                "Focus"
-            ),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        nextAlarmIntent = pending
-        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, nextEndAtMs, pending)
-        } else {
-            alarmManager.set(AlarmManager.RTC_WAKEUP, nextEndAtMs, pending)
-        }
-    }
-
-    private fun cancelNextAlarm() {
-        nextAlarmIntent?.let { pending ->
-            val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            alarmManager.cancel(pending)
-            pending.cancel()
-            nextAlarmIntent = null
-        }
+    private fun updateNotification(remaining: Int) {
+        startForeground(NOTIFICATION_ID, buildNotification(remaining))
     }
 
     private fun formatTime(seconds: Long): String {
