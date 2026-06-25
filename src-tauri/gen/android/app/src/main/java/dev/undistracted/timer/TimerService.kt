@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.util.Log
 import androidx.core.app.NotificationCompat
 
 class TimerService : Service() {
@@ -21,7 +22,9 @@ class TimerService : Service() {
         const val ACTION_START = "start"
         const val ACTION_STOP = "stop"
 
-        private var instance: TimerService? = null
+        @JvmStatic
+        internal var instance: TimerService? = null
+            private set
 
         fun start(
             context: Context,
@@ -64,11 +67,11 @@ class TimerService : Service() {
         }
     }
 
-    private var running = false
-    private var endAtMs = 0L
-    private var totalSecs = 0L
-    private var timerLabel = "Focus"
-    private var currentMode = "focus"
+    internal var running = false
+    internal var endAtMs = 0L
+    internal var totalSecs = 0L
+    internal var timerLabel = "Focus"
+    internal var currentMode = "focus"
     private var autoStart = false
     private var focusSecs = 0L
     private var shortSecs = 0L
@@ -115,7 +118,9 @@ class TimerService : Service() {
                     pendingNextRunnable = null
                 }
                 appIntent = buildPendingIntent()
-                startForeground(NOTIFICATION_ID, buildNotification(currentRemaining()))
+                val initialRemaining = currentRemaining()
+                Log.d("TimerService", "start mode=$currentMode endAt=$endAtMs total=$totalSecs remaining=$initialRemaining")
+                startForeground(NOTIFICATION_ID, buildNotification(initialRemaining))
                 handler.post(tick)
             }
             ACTION_STOP -> {
@@ -149,6 +154,7 @@ class TimerService : Service() {
             if (!running) return
 
             val remaining = currentRemaining()
+            Log.d("TimerService", "tick remaining=$remaining running=$running")
             updateNotification(remaining)
 
             if (remaining <= 0) {
@@ -248,7 +254,11 @@ class TimerService : Service() {
     }
 
     private fun updateNotification(remaining: Int) {
-        startForeground(NOTIFICATION_ID, buildNotification(remaining))
+        try {
+            startForeground(NOTIFICATION_ID, buildNotification(remaining))
+        } catch (e: Exception) {
+            Log.e("TimerService", "updateNotification failed", e)
+        }
     }
 
     private fun formatTime(seconds: Long): String {

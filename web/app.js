@@ -147,6 +147,7 @@
     bindEvents();
     render();
     setTicking(state.isRunning);
+    syncNativeState();
   }
 
   function applyRuntime() {
@@ -258,6 +259,12 @@
     listenAndroidBackButton();
 
     document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        return;
+      }
+
+      syncNativeState();
+
       if (!state.isRunning) {
         return;
       }
@@ -517,6 +524,40 @@
     }
   }
 
+  function syncNativeState() {
+    if (!isTauriAndroid()) {
+      return;
+    }
+
+    try {
+      const raw = window.TimerBridge?.getState?.();
+      if (!raw || raw === "{}") {
+        return;
+      }
+
+      const native = JSON.parse(raw);
+      if (!native.running || !native.endAt || native.totalSecs <= 0) {
+        return;
+      }
+
+      const remaining = Math.max(0, Math.ceil((native.endAt - Date.now()) / 1000));
+      if (remaining <= 0) {
+        return;
+      }
+
+      state.mode = native.mode;
+      state.currentDuration = native.totalSecs;
+      state.remaining = remaining;
+      state.isRunning = true;
+      state.endAt = native.endAt;
+      setTicking(true);
+      requestWakeLock();
+      render();
+    } catch {
+      // ignore bridge errors
+    }
+  }
+
   function clearAutoStart() {
     if (autoStartHandle !== null) {
       window.clearTimeout(autoStartHandle);
@@ -619,7 +660,12 @@
     state.endAt = null;
     setTicking(false);
     releaseWakeLock();
-    stopTimerNotification();
+
+    const androidAutoStart = automatic && state.settings.autoStart && isTauriAndroid();
+    if (!androidAutoStart) {
+      stopTimerNotification();
+    }
+
     saveState();
     render();
 
@@ -628,7 +674,13 @@
     }
 
     if (automatic && state.settings.autoStart) {
-      autoStartHandle = window.setTimeout(startTimer, 700);
+      if (isTauriAndroid()) {
+        // The native service will start the next session in the background.
+        // Sync the UI once it has had time to start.
+        window.setTimeout(syncNativeState, 900);
+      } else {
+        autoStartHandle = window.setTimeout(startTimer, 700);
+      }
     }
   }
 

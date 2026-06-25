@@ -27,4 +27,10 @@ class TimerBridge(private val context: Context) {
     fun timerStop() {
         TimerService.stop(context)
     }
+
+    @JavascriptInterface
+    fun getState(): String {
+        val svc = TimerService.instance ?: return "{}"
+        return """{"running":${svc.running},"mode":"${svc.currentMode}","endAt":${svc.endAtMs},"totalSecs":${svc.totalSecs},"label":"${svc.timerLabel}"}"""
+    }
 }
