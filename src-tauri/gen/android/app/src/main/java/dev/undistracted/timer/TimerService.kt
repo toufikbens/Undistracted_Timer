@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.PowerManager
 import android.util.Log
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
@@ -83,11 +84,15 @@ class TimerService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var appIntent: PendingIntent? = null
     private var pendingNextRunnable: Runnable? = null
+    private var wakeLock: PowerManager.WakeLock? = null
 
     override fun onCreate() {
         super.onCreate()
         instance = this
         createChannels()
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "undistracted:timer")
+        wakeLock?.setReferenceCounted(false)
     }
 
     override fun onDestroy() {
@@ -95,6 +100,7 @@ class TimerService : Service() {
         pendingNextRunnable?.let { handler.removeCallbacks(it) }
         running = false
         instance = null
+        wakeLock?.release()
         super.onDestroy()
     }
 
@@ -121,6 +127,7 @@ class TimerService : Service() {
                 appIntent = buildPendingIntent()
                 val initialRemaining = currentRemaining()
                 Log.d("TimerService", "start mode=$currentMode endAt=$endAtMs total=$totalSecs remaining=$initialRemaining")
+                acquireWakeLock()
                 startForeground(NOTIFICATION_ID, buildNotification(initialRemaining))
                 handler.post(tick)
             }
@@ -139,8 +146,18 @@ class TimerService : Service() {
         }
         running = false
         autoStart = false
+        wakeLock?.release()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
+    }
+
+    private fun acquireWakeLock() {
+        try {
+            // Keep the CPU awake for up to one hour while a timer is running.
+            wakeLock?.acquire(60 * 60 * 1000L)
+        } catch (e: Exception) {
+            Log.e("TimerService", "Failed to acquire wake lock", e)
+        }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
