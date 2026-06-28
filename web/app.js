@@ -553,6 +553,9 @@
       state.remaining = remaining;
       state.isRunning = true;
       state.endAt = native.endAt;
+      if (typeof native.completedInCycle === "number") {
+        state.completedInCycle = native.completedInCycle;
+      }
       setTicking(true);
       requestWakeLock();
       render();

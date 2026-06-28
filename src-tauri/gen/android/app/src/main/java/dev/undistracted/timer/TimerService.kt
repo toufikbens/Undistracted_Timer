@@ -78,7 +78,7 @@ class TimerService : Service() {
     private var shortSecs = 0L
     private var longSecs = 0L
     private var longEvery = 4
-    private var completedInCycle = 0
+    internal var completedInCycle = 0
 
     private val handler = Handler(Looper.getMainLooper())
     private var appIntent: PendingIntent? = null
