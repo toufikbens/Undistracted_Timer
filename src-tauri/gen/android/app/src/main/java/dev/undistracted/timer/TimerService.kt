@@ -12,6 +12,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
 
 class TimerService : Service() {
@@ -173,6 +174,10 @@ class TimerService : Service() {
         }
 
         if (autoStart) {
+            // Stay in the foreground; just swap the notification to the
+            // completion alert, then start the next session shortly after.
+            Log.d("TimerService", "onTimerComplete autoStart next=${computeNextMode()}")
+            Toast.makeText(this, "${timerLabel} complete — starting next", Toast.LENGTH_SHORT).show()
             startForeground(NOTIFICATION_ID, buildCompletionNotification())
             val nextMode = computeNextMode()
             val runnable = Runnable { startNextSegment(nextMode) }
@@ -193,6 +198,8 @@ class TimerService : Service() {
         timerLabel = labelForMode(nextMode)
         endAtMs = System.currentTimeMillis() + totalSecs * 1000
         running = true
+        Log.d("TimerService", "startNextSegment mode=$currentMode total=$totalSecs endAt=$endAtMs")
+        Toast.makeText(this, "Starting $timerLabel", Toast.LENGTH_SHORT).show()
         startForeground(NOTIFICATION_ID, buildNotification(currentRemaining()))
         handler.post(tick)
     }
@@ -248,6 +255,7 @@ class TimerService : Service() {
             .setSmallIcon(iconRes)
             .setContentTitle("${timerLabel} complete")
             .setContentText("Tap to open")
+            .setOngoing(true)
             .setAutoCancel(true)
             .setContentIntent(appIntent)
             .build()

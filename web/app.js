@@ -146,8 +146,11 @@
     syncInputs();
     bindEvents();
     render();
-    setTicking(state.isRunning);
     syncNativeState();
+    setTicking(state.isRunning);
+    if (state.isRunning) {
+      requestWakeLock();
+    }
   }
 
   function applyRuntime() {
