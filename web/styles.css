@@ -389,6 +389,10 @@ html[data-runtime="android"] .side-panel {
   min-width: 0;
 }
 
+.brand > div {
+  min-width: 0;
+}
+
 .brand-mark {
   width: 34px;
   height: 34px;
@@ -407,9 +411,12 @@ html[data-runtime="android"] .side-panel {
 
 h1 {
   margin: 2px 0 0;
+  overflow: hidden;
   font-size: 1.08rem;
   line-height: 1.2;
   font-weight: 680;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Header actions */
@@ -1284,7 +1291,7 @@ body.is-running .status-pill {
   }
 
   .titlebar {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .traffic-lights {
@@ -1365,6 +1372,28 @@ body.is-running .status-pill {
 
   .utility-button.ambient-toggle {
     width: 100%;
+  }
+}
+
+@media (max-width: 360px) {
+  .titlebar {
+    gap: 10px;
+  }
+
+  .title-actions {
+    gap: 8px;
+  }
+
+  .timer-stage {
+    padding-inline: 16px;
+  }
+
+  .status-pill {
+    display: none;
+  }
+
+  .theme-button {
+    padding-inline: 10px;
   }
 }
 

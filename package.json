@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "check": "npm run web:check && npm run desktop:check",
+    "web:check": "node --check web/app.js",
+    "desktop:check": "cargo check --manifest-path src-tauri/Cargo.toml",
     "web:serve": "python3 -m http.server 5173 --directory web",
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build --target universal-apple-darwin",

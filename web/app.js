@@ -467,10 +467,24 @@
       return;
     }
 
+    completeExpiredRunningTimer();
+  }
+
+  // If the app was closed when the timer elapsed, advance the saved state once
+  // without replaying alerts or sounds on the next launch.
+  function completeExpiredRunningTimer() {
+    const completedMode = state.mode;
+    const completedAt = state.endAt || Date.now();
+    const completedDuration = state.currentDuration || modeDuration(completedMode);
+    const countedFocus = applyFocusCompletion(completedMode, true, completedAt, completedDuration);
+    const nextMode = getNextMode(completedMode, countedFocus);
+
+    state.mode = nextMode;
+    state.currentDuration = modeDuration(nextMode);
+    state.remaining = state.currentDuration;
     state.isRunning = false;
     state.endAt = null;
-    state.remaining = 0;
-    state.currentDuration = state.currentDuration || modeDuration(state.mode);
+    saveState();
   }
 
   // Push saved state into form controls before the user starts interacting.
@@ -649,16 +663,10 @@
   function finishMode({ counted, automatic }) {
     clearAutoStart();
     const completedMode = state.mode;
-    const shouldCountFocus = counted && completedMode === "focus";
+    const completedDuration = state.currentDuration || modeDuration(completedMode);
+    const countedFocus = applyFocusCompletion(completedMode, counted, Date.now(), completedDuration);
 
-    if (shouldCountFocus) {
-      rollTodayIfNeeded();
-      state.completedInCycle = (state.completedInCycle + 1) % state.settings.longEvery;
-      state.todayFocusSessions += 1;
-      state.todayFocusMinutes += Math.round((state.currentDuration || modeDuration("focus")) / 60);
-    }
-
-    const nextMode = getNextMode(completedMode, shouldCountFocus);
+    const nextMode = getNextMode(completedMode, countedFocus);
     state.mode = nextMode;
     state.currentDuration = modeDuration(nextMode);
     state.remaining = state.currentDuration;
@@ -688,6 +696,24 @@
         autoStartHandle = window.setTimeout(startTimer, 700);
       }
     }
+  }
+
+  function applyFocusCompletion(completedMode, counted, completedAt, completedDuration) {
+    const countedFocus = counted && completedMode === "focus";
+    if (!countedFocus) {
+      return false;
+    }
+
+    const completedDayKey = todayKey(new Date(completedAt));
+    rollTodayIfNeeded();
+    state.completedInCycle = (state.completedInCycle + 1) % state.settings.longEvery;
+
+    if (completedDayKey === state.todayKey) {
+      state.todayFocusSessions += 1;
+      state.todayFocusMinutes += Math.round(completedDuration / 60);
+    }
+
+    return true;
   }
 
   // Decide whether the next session should be focus, short break, or long break.
@@ -1585,8 +1611,8 @@
   }
 
   // YYYY-MM-DD key used to decide when daily stats should reset.
-  function todayKey() {
-    const now = new Date();
+  function todayKey(date = new Date()) {
+    const now = date;
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   }
 })();
