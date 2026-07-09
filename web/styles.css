@@ -224,10 +224,6 @@ html[data-runtime="tauri"][data-theme="light"] .brand-mark {
   background: rgba(255, 255, 255, 0.52);
 }
 
-html[data-runtime="tauri"] .download-link {
-  display: none;
-}
-
 /* Android runtime overrides */
 html[data-runtime="android"] {
   --page-padding-block: 0px;
@@ -314,10 +310,6 @@ html[data-runtime="android"] h1 {
   font-weight: 720;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-html[data-runtime="android"] .download-link {
-  display: none;
 }
 
 html[data-runtime="android"] .side-panel {
@@ -665,39 +657,6 @@ h1 {
 .side-panel {
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
-}
-
-.download-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 44px;
-  padding: 0 20px;
-  border: 1px solid var(--accent-border);
-  border-radius: 999px;
-  background: var(--accent);
-  color: var(--primary-text);
-  font-size: 0.95rem;
-  font-weight: 650;
-  text-decoration: none;
-}
-
-.download-link:hover {
-  filter: brightness(1.12);
-}
-
-/* Hide download label on phones — show icon only */
-@media (max-width: 520px) {
-  .download-label {
-    display: none;
-  }
-
-  .download-link {
-    min-height: 44px;
-    width: 44px;
-    padding: 0;
-    justify-content: center;
-  }
 }
 
 /* Form fields */
@@ -1170,12 +1129,6 @@ body.is-running .status-pill {
   .toggle-row span {
     font-size: 0.82rem;
   }
-
-  .download-link {
-    min-height: 40px;
-    font-size: 0.82rem;
-    padding: 0 14px;
-  }
 }
 
 @media (min-width: 861px) and (max-height: 740px) {
@@ -1203,12 +1156,6 @@ body.is-running .status-pill {
 
   .utility-button.subtle {
     min-height: 36px;
-  }
-
-  .download-link {
-    min-height: 38px;
-    font-size: 0.82rem;
-    padding: 0 14px;
   }
 
   .panel strong {
