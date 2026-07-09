@@ -44,7 +44,6 @@ npm install
 npm run desktop:release
 ```
 
-The `.app` and `.dmg` are written to `dist/`.
 
 ## Live Site
 
