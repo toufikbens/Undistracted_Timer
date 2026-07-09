@@ -699,14 +699,19 @@
   }
 
   function applyFocusCompletion(completedMode, counted, completedAt, completedDuration) {
-    const countedFocus = counted && completedMode === "focus";
+    const isFocus = completedMode === "focus";
+    const countedFocus = counted && isFocus;
+
+    if (isFocus) {
+      state.completedInCycle = (state.completedInCycle + 1) % state.settings.longEvery;
+    }
+
     if (!countedFocus) {
       return false;
     }
 
     const completedDayKey = todayKey(new Date(completedAt));
     rollTodayIfNeeded();
-    state.completedInCycle = (state.completedInCycle + 1) % state.settings.longEvery;
 
     if (completedDayKey === state.todayKey) {
       state.todayFocusSessions += 1;
