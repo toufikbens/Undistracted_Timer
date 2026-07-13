@@ -59,7 +59,7 @@
       label: "Piano",
       tone: "Gentle keys",
       categories: ["focus", "calm"],
-      src: "assets/piano.mp3"
+      src: "assets/piano1.mp3"
     }
   };
 
