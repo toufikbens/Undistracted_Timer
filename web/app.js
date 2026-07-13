@@ -54,6 +54,12 @@
       tone: "Rolling storm",
       categories: ["focus", "calm"],
       src: "assets/Epic-storm.mp3"
+    },
+    piano: {
+      label: "Piano",
+      tone: "Gentle keys",
+      categories: ["focus", "calm"],
+      src: "assets/piano.mp3"
     }
   };
 
