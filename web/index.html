@@ -33,7 +33,7 @@
   <body>
     <!-- App shell -->
     <main class="shell" aria-label="Undistracted Timer">
-      <!-- Top bar: app identity, theme toggle, and timer status -->
+      <!-- Top bar: app identity, appearance, and timer status -->
       <header class="titlebar" data-tauri-drag-region>
         <div class="traffic-lights" aria-hidden="true">
           <span class="light light-close"></span>
@@ -48,8 +48,14 @@
           </div>
         </div>
         <div class="title-actions">
-          <button class="theme-button" id="themeToggleButton" type="button" aria-label="Switch to light theme">
-            <span id="themeToggleText">Light</span>
+          <button class="theme-button web-only" id="webAmbientButton" type="button" aria-label="Ambient Sounds">
+            <span>Ambient Sounds</span>
+          </button>
+          <button class="theme-button web-only" id="webAppearanceButton" type="button" aria-label="Appearance">
+            <span>Appearance</span>
+          </button>
+          <button class="theme-button web-only" id="webSettingsButton" type="button" aria-label="Settings">
+            <span>Settings</span>
           </button>
           <p class="status-pill" id="statusText" aria-live="polite">Ready</p>
         </div>
@@ -78,6 +84,13 @@
             </div>
           </div>
 
+          <div class="cycle-progress" aria-label="Session cycle progress">
+            <div class="cycle-progress-bar">
+              <div class="cycle-progress-fill" id="cycleProgressFill"></div>
+            </div>
+            <span class="cycle-progress-text" id="cycleProgressText">0 / 4 sessions</span>
+          </div>
+
           <div class="controls" aria-label="Timer controls">
             <button class="control-button primary" id="startPauseButton" type="button">Start</button>
             <button class="control-button" id="resetButton" type="button">Reset</button>
@@ -92,7 +105,7 @@
           </div>
         </div>
 
-        <!-- Side panel: Ambient Sounds, daily stats, timer settings, and preferences -->
+        <!-- Side panel: daily stats, timer settings, and preferences -->
         <aside class="side-panel" aria-label="Focus details and preferences">
           <section class="ambient-summary" aria-label="Ambient Sounds">
             <div>
@@ -168,6 +181,75 @@
             <input id="ambientVolume" type="range" min="0" max="100" step="1" value="42">
           </label>
           <button class="utility-button ambient-toggle" id="ambientToggleButton" type="button" aria-pressed="false">Play</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="web-appearance-overlay" id="webAppearanceOverlay" hidden>
+      <section class="web-appearance-window" role="dialog" aria-modal="true" aria-labelledby="webAppearanceTitle">
+        <header class="web-appearance-header">
+          <h2 id="webAppearanceTitle">Background</h2>
+          <button class="utility-button" id="webAppearanceCloseButton" type="button">Close</button>
+        </header>
+        <div class="web-appearance-grid" id="webAppearanceGrid"></div>
+        <div class="web-appearance-controls">
+          <label class="web-appearance-slider">
+            <span>Opacity <strong id="webOpacityValue">72%</strong></span>
+            <input id="webOpacitySlider" type="range" min="0" max="100" step="1" value="72">
+          </label>
+          <label class="web-appearance-slider">
+            <span>Glass blur <strong id="webBlurValue">14px</strong></span>
+            <input id="webBlurSlider" type="range" min="0" max="30" step="1" value="14">
+          </label>
+        </div>
+      </section>
+    </div>
+
+    <div class="web-settings-overlay" id="webSettingsOverlay" hidden>
+      <section class="web-settings-window" role="dialog" aria-modal="true" aria-labelledby="webSettingsTitle">
+        <header class="web-settings-header">
+          <h2 id="webSettingsTitle">Settings</h2>
+          <button class="utility-button" id="webSettingsCloseButton" type="button">Close</button>
+        </header>
+        <div class="web-settings-content">
+          <section class="panel" aria-label="Timer durations">
+            <p class="metric-label">Timer durations</p>
+            <div class="setting-row">
+              <label for="webFocusMinutes">Focus</label>
+              <input id="webFocusMinutes" type="number" min="1" max="180" step="1" inputmode="numeric">
+            </div>
+            <div class="setting-row">
+              <label for="webShortMinutes">Short break</label>
+              <input id="webShortMinutes" type="number" min="1" max="90" step="1" inputmode="numeric">
+            </div>
+            <div class="setting-row">
+              <label for="webLongMinutes">Long break</label>
+              <input id="webLongMinutes" type="number" min="1" max="120" step="1" inputmode="numeric">
+            </div>
+            <div class="setting-row">
+              <label for="webLongEvery">Long break every</label>
+              <input id="webLongEvery" type="number" min="2" max="12" step="1" inputmode="numeric">
+            </div>
+          </section>
+          <section class="panel" aria-label="Preferences">
+            <p class="metric-label">Preferences</p>
+            <label class="toggle-row">
+              <span>Auto-start next session</span>
+              <input id="webAutoStartToggle" type="checkbox">
+            </label>
+            <label class="toggle-row">
+              <span>Completion chime</span>
+              <input id="webSoundToggle" type="checkbox">
+            </label>
+            <button class="utility-button" id="webNotifyButton" type="button">Enable notifications</button>
+          </section>
+          <section class="panel" aria-label="Stats">
+            <p class="metric-label">Today</p>
+            <strong id="webTodayMetric">0 focus sessions</strong>
+            <p class="metric-label">Focus time</p>
+            <strong id="webMinutesMetric">0 min</strong>
+            <button class="utility-button subtle" id="webClearStatsButton" type="button">Clear focus stats</button>
+          </section>
         </div>
       </section>
     </div>

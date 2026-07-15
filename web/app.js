@@ -87,7 +87,10 @@
       ambientSound: "off",
       ambientSounds: [],
       ambientVolume: 42,
-      ambientSoundVolumes: {}
+      ambientSoundVolumes: {},
+      backgroundImage: "none",
+      glassOpacity: 72,
+      glassBlur: 14
     }
   };
 
@@ -114,12 +117,12 @@
     timerTime: document.getElementById("timerTime"),
     nextLabel: document.getElementById("nextLabel"),
     statusText: document.getElementById("statusText"),
-    themeToggleButton: document.getElementById("themeToggleButton"),
-    themeToggleText: document.getElementById("themeToggleText"),
     startPauseButton: document.getElementById("startPauseButton"),
     resetButton: document.getElementById("resetButton"),
     skipButton: document.getElementById("skipButton"),
     cycleRow: document.querySelector(".session-row"),
+    cycleProgressFill: document.getElementById("cycleProgressFill"),
+    cycleProgressText: document.getElementById("cycleProgressText"),
     todayMetric: document.getElementById("todayMetric"),
     minutesMetric: document.getElementById("minutesMetric"),
     clearStatsButton: document.getElementById("clearStatsButton"),
@@ -138,7 +141,29 @@
     ambientVolume: document.getElementById("ambientVolume"),
     ambientVolumeValue: document.getElementById("ambientVolumeValue"),
     notifyButton: document.getElementById("notifyButton"),
-    themeColorMeta: document.querySelector('meta[name="theme-color"]')
+    themeColorMeta: document.querySelector('meta[name="theme-color"]'),
+    webAmbientButton: document.getElementById("webAmbientButton"),
+    webAppearanceButton: document.getElementById("webAppearanceButton"),
+    webAppearanceOverlay: document.getElementById("webAppearanceOverlay"),
+    webAppearanceCloseButton: document.getElementById("webAppearanceCloseButton"),
+    webAppearanceGrid: document.getElementById("webAppearanceGrid"),
+    webOpacitySlider: document.getElementById("webOpacitySlider"),
+    webOpacityValue: document.getElementById("webOpacityValue"),
+    webBlurSlider: document.getElementById("webBlurSlider"),
+    webBlurValue: document.getElementById("webBlurValue"),
+    webSettingsButton: document.getElementById("webSettingsButton"),
+    webSettingsOverlay: document.getElementById("webSettingsOverlay"),
+    webSettingsCloseButton: document.getElementById("webSettingsCloseButton"),
+    webFocusMinutes: document.getElementById("webFocusMinutes"),
+    webShortMinutes: document.getElementById("webShortMinutes"),
+    webLongMinutes: document.getElementById("webLongMinutes"),
+    webLongEvery: document.getElementById("webLongEvery"),
+    webAutoStartToggle: document.getElementById("webAutoStartToggle"),
+    webSoundToggle: document.getElementById("webSoundToggle"),
+    webNotifyButton: document.getElementById("webNotifyButton"),
+    webClearStatsButton: document.getElementById("webClearStatsButton"),
+    webTodayMetric: document.getElementById("webTodayMetric"),
+    webMinutesMetric: document.getElementById("webMinutesMetric")
   };
 
   initialise();
@@ -148,7 +173,8 @@
     applyRuntime();
     rollTodayIfNeeded();
     restoreRunningTimer();
-    applyTheme();
+    document.documentElement.dataset.theme = "dark";
+    applyBackground();
     syncInputs();
     bindEvents();
     render();
@@ -251,6 +277,46 @@
       saveState();
     });
 
+    if (elements.webFocusMinutes) {
+      elements.webFocusMinutes.addEventListener("change", () => updateWebNumberSetting(elements.webFocusMinutes, "focusMinutes"));
+      elements.webFocusMinutes.addEventListener("blur", () => updateWebNumberSetting(elements.webFocusMinutes, "focusMinutes"));
+    }
+    if (elements.webShortMinutes) {
+      elements.webShortMinutes.addEventListener("change", () => updateWebNumberSetting(elements.webShortMinutes, "shortMinutes"));
+      elements.webShortMinutes.addEventListener("blur", () => updateWebNumberSetting(elements.webShortMinutes, "shortMinutes"));
+    }
+    if (elements.webLongMinutes) {
+      elements.webLongMinutes.addEventListener("change", () => updateWebNumberSetting(elements.webLongMinutes, "longMinutes"));
+      elements.webLongMinutes.addEventListener("blur", () => updateWebNumberSetting(elements.webLongMinutes, "longMinutes"));
+    }
+    if (elements.webLongEvery) {
+      elements.webLongEvery.addEventListener("change", () => updateWebNumberSetting(elements.webLongEvery, "longEvery"));
+      elements.webLongEvery.addEventListener("blur", () => updateWebNumberSetting(elements.webLongEvery, "longEvery"));
+    }
+    if (elements.webAutoStartToggle) {
+      elements.webAutoStartToggle.addEventListener("change", () => {
+        state.settings.autoStart = elements.webAutoStartToggle.checked;
+        if (elements.autoStartToggle) elements.autoStartToggle.checked = elements.webAutoStartToggle.checked;
+        saveState();
+      });
+    }
+    if (elements.webSoundToggle) {
+      elements.webSoundToggle.addEventListener("change", () => {
+        state.settings.sound = elements.webSoundToggle.checked;
+        if (elements.soundToggle) elements.soundToggle.checked = elements.webSoundToggle.checked;
+        saveState();
+      });
+    }
+    if (elements.webNotifyButton) {
+      elements.webNotifyButton.addEventListener("click", () => {
+        if (elements.notifyButton) elements.notifyButton.click();
+        else requestNotifications();
+      });
+    }
+    if (elements.webClearStatsButton) {
+      elements.webClearStatsButton.addEventListener("click", clearFocusStats);
+    }
+
     elements.ambientManageButton.addEventListener("click", openAmbientDialog);
     elements.ambientCloseButton.addEventListener("click", closeAmbientDialog);
     elements.ambientOverlay.addEventListener("click", (event) => {
@@ -263,7 +329,42 @@
 
     elements.notifyButton.addEventListener("click", requestNotifications);
     elements.clearStatsButton.addEventListener("click", clearFocusStats);
-    elements.themeToggleButton.addEventListener("click", toggleTheme);
+
+    if (elements.webAmbientButton) {
+      elements.webAmbientButton.addEventListener("click", openAmbientDialog);
+    }
+    if (elements.webAppearanceButton) {
+      elements.webAppearanceButton.addEventListener("click", openAppearanceDialog);
+    }
+    if (elements.webAppearanceCloseButton) {
+      elements.webAppearanceCloseButton.addEventListener("click", closeAppearanceDialog);
+    }
+    if (elements.webAppearanceOverlay) {
+      elements.webAppearanceOverlay.addEventListener("click", (event) => {
+        if (event.target === elements.webAppearanceOverlay) {
+          closeAppearanceDialog();
+        }
+      });
+    }
+    if (elements.webOpacitySlider) {
+      elements.webOpacitySlider.addEventListener("input", updateGlassOpacity);
+    }
+    if (elements.webBlurSlider) {
+      elements.webBlurSlider.addEventListener("input", updateGlassBlur);
+    }
+    if (elements.webSettingsButton) {
+      elements.webSettingsButton.addEventListener("click", openWebSettings);
+    }
+    if (elements.webSettingsCloseButton) {
+      elements.webSettingsCloseButton.addEventListener("click", closeWebSettings);
+    }
+    if (elements.webSettingsOverlay) {
+      elements.webSettingsOverlay.addEventListener("click", (event) => {
+        if (event.target === elements.webSettingsOverlay) {
+          closeWebSettings();
+        }
+      });
+    }
 
     listenAndroidBackButton();
 
@@ -367,7 +468,7 @@
     nextState.completedInCycle = boundedInteger(nextState.completedInCycle, 0, nextState.settings.longEvery - 1, 0);
     nextState.todayFocusSessions = boundedInteger(nextState.todayFocusSessions, 0, 10000, 0);
     nextState.todayFocusMinutes = boundedInteger(nextState.todayFocusMinutes, 0, 100000, 0);
-    nextState.settings.theme = nextState.settings.theme === "light" ? "light" : "dark";
+    nextState.settings.theme = "dark";
     const savedAmbientSounds = Array.isArray(nextState.settings.ambientSounds)
       ? nextState.settings.ambientSounds
       : [];
@@ -504,7 +605,6 @@
     elements.ambientVolume.value = state.settings.ambientVolume;
     elements.ambientVolumeValue.textContent = `${state.settings.ambientVolume}%`;
     updateNotificationButton();
-    updateThemeButton();
   }
 
   function scheduleTimerNotification() {
@@ -733,10 +833,6 @@
       return "focus";
     }
 
-    if (!countedFocus) {
-      return state.completedInCycle === state.settings.longEvery - 1 ? "long" : "short";
-    }
-
     return state.completedInCycle === 0 ? "long" : "short";
   }
 
@@ -806,6 +902,32 @@
     if (!state.isRunning && modes[state.mode].durationKey === input.id) {
       state.currentDuration = modeDuration(state.mode);
       state.remaining = state.currentDuration;
+    }
+
+    saveState();
+    render();
+  }
+
+  // Web-only: validate a numeric setting in the settings overlay.
+  function updateWebNumberSetting(input, settingKey) {
+    const min = Number(input.min || 1);
+    const max = Number(input.max || 180);
+    const value = Math.min(max, Math.max(min, Math.round(Number(input.value) || min)));
+    input.value = value;
+    state.settings[settingKey] = value;
+
+    if (settingKey === "longEvery") {
+      state.completedInCycle = Math.min(state.completedInCycle, value - 1);
+    }
+
+    if (!state.isRunning && modes[state.mode].durationKey === settingKey) {
+      state.currentDuration = modeDuration(state.mode);
+      state.remaining = state.currentDuration;
+    }
+
+    const sideInput = elements[settingKey];
+    if (sideInput) {
+      sideInput.value = value;
     }
 
     saveState();
@@ -1212,35 +1334,6 @@
     return Math.min(1, Math.max(0, globalVolume * soundVolume));
   }
 
-  // Flip between dark and light themes, then persist the choice.
-  function toggleTheme() {
-    state.settings.theme = state.settings.theme === "light" ? "dark" : "light";
-    applyTheme();
-    updateThemeButton();
-    saveState();
-  }
-
-  // Apply the theme to the document so CSS variables can update the whole UI.
-  function applyTheme() {
-    const theme = state.settings.theme === "light" ? "light" : "dark";
-    state.settings.theme = theme;
-    document.documentElement.dataset.theme = theme;
-
-    if (elements.themeColorMeta) {
-      elements.themeColorMeta.setAttribute("content", theme === "light" ? "#f4f6fb" : "#08090c");
-    }
-  }
-
-  // The button label shows the theme the user can switch to next.
-  function updateThemeButton() {
-    const isLight = state.settings.theme === "light";
-    const nextTheme = isLight ? "dark" : "light";
-    const label = `Switch to ${nextTheme} theme`;
-    elements.themeToggleText.textContent = isLight ? "Dark" : "Light";
-    elements.themeToggleButton.setAttribute("aria-label", label);
-    elements.themeToggleButton.title = label;
-  }
-
   function isTauriAndroid() {
     return document.documentElement.dataset.runtime === "android";
   }
@@ -1478,9 +1571,29 @@
       dot.classList.toggle("is-current", index === state.completedInCycle);
     });
 
+    const cyclePercent = state.settings.longEvery > 0
+      ? Math.min(100, (state.completedInCycle / state.settings.longEvery) * 100)
+      : 0;
+    if (elements.cycleProgressFill) {
+      elements.cycleProgressFill.style.width = `${cyclePercent}%`;
+    }
+    if (elements.cycleProgressText) {
+      elements.cycleProgressText.textContent = `${state.completedInCycle} / ${state.settings.longEvery} sessions`;
+    }
+
     elements.todayMetric.textContent = pluralise(state.todayFocusSessions, "focus session");
     elements.minutesMetric.textContent = `${state.todayFocusMinutes} min`;
-    elements.clearStatsButton.disabled = state.todayFocusSessions === 0 && state.todayFocusMinutes === 0 && state.completedInCycle === 0;
+    if (elements.webTodayMetric) {
+      elements.webTodayMetric.textContent = pluralise(state.todayFocusSessions, "focus session");
+    }
+    if (elements.webMinutesMetric) {
+      elements.webMinutesMetric.textContent = `${state.todayFocusMinutes} min`;
+    }
+    const statsEmpty = state.todayFocusSessions === 0 && state.todayFocusMinutes === 0 && state.completedInCycle === 0;
+    elements.clearStatsButton.disabled = statsEmpty;
+    if (elements.webClearStatsButton) {
+      elements.webClearStatsButton.disabled = statsEmpty;
+    }
     renderAmbientControls();
     renderStatus();
   }
@@ -1491,7 +1604,9 @@
     const isPlaying = ambientIsPlaying();
     const isPending = ambientIsPending();
 
-    elements.ambientLabel.textContent = ambientLabelForSelection(selectedSoundKeys, isPlaying);
+    if (elements.ambientLabel) {
+      elements.ambientLabel.textContent = ambientLabelForSelection(selectedSoundKeys, isPlaying);
+    }
     elements.ambientVolume.value = state.settings.ambientVolume;
     elements.ambientVolumeValue.textContent = `${state.settings.ambientVolume}%`;
     elements.ambientVolume.disabled = isOff;
@@ -1625,5 +1740,127 @@
   function todayKey(date = new Date()) {
     const now = date;
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  }
+
+  // Web-only: Appearance dialog for background images
+  function openAppearanceDialog() {
+    renderAppearanceGrid();
+    elements.webAppearanceOverlay.hidden = false;
+  }
+
+  function closeAppearanceDialog() {
+    elements.webAppearanceOverlay.hidden = true;
+  }
+
+  function openWebSettings() {
+    if (elements.webFocusMinutes) elements.webFocusMinutes.value = state.settings.focusMinutes;
+    if (elements.webShortMinutes) elements.webShortMinutes.value = state.settings.shortMinutes;
+    if (elements.webLongMinutes) elements.webLongMinutes.value = state.settings.longMinutes;
+    if (elements.webLongEvery) elements.webLongEvery.value = state.settings.longEvery;
+    if (elements.webAutoStartToggle) elements.webAutoStartToggle.checked = state.settings.autoStart;
+    if (elements.webSoundToggle) elements.webSoundToggle.checked = state.settings.sound;
+    elements.webSettingsOverlay.hidden = false;
+  }
+
+  function closeWebSettings() {
+    elements.webSettingsOverlay.hidden = true;
+  }
+
+  function renderAppearanceGrid() {
+    if (!elements.webAppearanceGrid) return;
+
+    const images = [
+      "1851182.jpg",
+      "piqsels.com-id-scjko.jpg",
+      "piqsels.com-id-sqfso.jpg",
+      "wallhaven-28y6lg_3840x2160.png",
+      "wallhaven-9m1358_3840x2160.png",
+      "wallhaven-eo8evl_3840x2160.png",
+      "wallhaven-eovv3r_3840x2160.png",
+      "wallhaven-gjk3xq_3840x2160.png",
+      "wallhaven-n6dr1l_3840x2160.png",
+      "wallhaven-n6pjmx_3840x2160.png",
+      "wallhaven-nkd1ed_3840x2160.png",
+      "wallhaven-p8816j_3840x2160.png",
+      "wallhaven-q66kx5_3840x2160.png"
+    ];
+
+    const fragment = document.createDocumentFragment();
+    const currentBg = state.settings.backgroundImage || "none";
+
+    const noneOption = document.createElement("button");
+    noneOption.type = "button";
+    noneOption.className = "web-appearance-option";
+    noneOption.style.background = "var(--surface-soft)";
+    noneOption.setAttribute("aria-label", "No background");
+    if (currentBg === "none") {
+      noneOption.classList.add("is-active");
+    }
+    noneOption.addEventListener("click", () => setBackground("none"));
+    fragment.appendChild(noneOption);
+
+    images.forEach((name) => {
+      const path = `assets/Images/${name}`;
+      const option = document.createElement("button");
+      option.type = "button";
+      option.className = "web-appearance-option";
+      option.style.backgroundImage = `url(${path})`;
+      option.setAttribute("aria-label", `Background ${name}`);
+      if (currentBg === path) {
+        option.classList.add("is-active");
+      }
+      option.addEventListener("click", () => setBackground(path));
+      fragment.appendChild(option);
+    });
+
+    elements.webAppearanceGrid.replaceChildren(fragment);
+  }
+
+  function setBackground(imagePath) {
+    state.settings.backgroundImage = imagePath;
+    applyBackground();
+    saveState();
+    renderAppearanceGrid();
+  }
+
+  function applyBackground() {
+    if (document.documentElement.dataset.runtime !== "web") return;
+    const bg = state.settings.backgroundImage;
+    if (bg && bg !== "none") {
+      document.documentElement.style.setProperty("--web-bg-image", `url(${bg})`);
+    } else {
+      document.documentElement.style.setProperty("--web-bg-image", "none");
+    }
+    applyGlass();
+  }
+
+  function applyGlass() {
+    if (document.documentElement.dataset.runtime !== "web") return;
+    const opacity = boundedInteger(state.settings.glassOpacity, 0, 100, 72);
+    const blur = boundedInteger(state.settings.glassBlur, 0, 30, 14);
+    const surfaceAlpha = Math.min(0.85, Math.max(0.1, opacity / 100 - 0.1));
+    document.documentElement.style.setProperty("--web-glass-opacity", (opacity / 100).toFixed(2));
+    document.documentElement.style.setProperty("--web-glass-blur", `${blur}px`);
+    document.documentElement.style.setProperty("--web-surface-alpha", surfaceAlpha.toFixed(2));
+    if (elements.webOpacitySlider) {
+      elements.webOpacitySlider.value = opacity;
+      if (elements.webOpacityValue) elements.webOpacityValue.textContent = `${opacity}%`;
+    }
+    if (elements.webBlurSlider) {
+      elements.webBlurSlider.value = blur;
+      if (elements.webBlurValue) elements.webBlurValue.textContent = `${blur}px`;
+    }
+  }
+
+  function updateGlassOpacity() {
+    state.settings.glassOpacity = boundedInteger(elements.webOpacitySlider.value, 0, 100, 72);
+    applyGlass();
+    saveState();
+  }
+
+  function updateGlassBlur() {
+    state.settings.glassBlur = boundedInteger(elements.webBlurSlider.value, 0, 30, 14);
+    applyGlass();
+    saveState();
   }
 })();
