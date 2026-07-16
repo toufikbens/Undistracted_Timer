@@ -781,8 +781,10 @@ h1 {
   inset: 0;
   display: grid;
   place-items: center;
-  padding: 20px;
+  align-content: center;
+  padding: 8px;
   background: rgba(2, 3, 6, 0.56);
+  overflow-y: auto;
 }
 
 .ambient-overlay[hidden] {
@@ -795,13 +797,16 @@ body.ambient-open {
 
 .ambient-window {
   width: min(430px, 100%);
+  max-height: calc(100vh - 16px);
+  max-height: calc(100svh - 16px);
   display: grid;
-  gap: 14px;
-  padding: 18px;
+  gap: 10px;
+  padding: 14px;
   border: 1px solid var(--border-strong);
   border-radius: 12px;
   background: var(--shell-bg);
   box-shadow: var(--shadow);
+  overflow-y: auto;
 }
 
 .ambient-window-header {
@@ -1450,8 +1455,10 @@ html[data-runtime="web"] .shell {
   inset: 0;
   display: grid;
   place-items: center;
-  padding: 20px;
+  align-content: center;
+  padding: 8px;
   background: rgba(2, 3, 6, 0.6);
+  overflow-y: auto;
 }
 
 .web-appearance-overlay[hidden] {
@@ -1460,14 +1467,15 @@ html[data-runtime="web"] .shell {
 
 .web-appearance-window {
   width: min(520px, 100%);
-  max-height: 80vh;
+  max-height: calc(100vh - 16px);
+  max-height: calc(100svh - 16px);
   display: grid;
-  gap: 16px;
-  padding: 20px;
+  gap: 12px;
+  padding: 14px;
   border: 1px solid var(--border-strong);
   border-radius: 12px;
   background: var(--shell-bg);
-  overflow-y: auto;
+  overflow: visible;
 }
 
 .web-appearance-header {
@@ -1542,8 +1550,10 @@ html[data-runtime="web"] .shell {
   inset: 0;
   display: grid;
   place-items: center;
-  padding: 20px;
+  align-content: center;
+  padding: 8px;
   background: rgba(2, 3, 6, 0.6);
+  overflow-y: auto;
 }
 
 .web-settings-overlay[hidden] {
@@ -1552,13 +1562,15 @@ html[data-runtime="web"] .shell {
 
 .web-settings-window {
   width: min(480px, 100%);
+  max-height: calc(100vh - 16px);
+  max-height: calc(100svh - 16px);
   display: grid;
-  gap: 16px;
-  padding: 20px;
+  gap: 12px;
+  padding: 14px;
   border: 1px solid var(--border-strong);
   border-radius: 12px;
   background: var(--shell-bg);
-  overflow: visible;
+  overflow-y: auto;
 }
 
 .web-settings-header {
@@ -1574,5 +1586,5 @@ html[data-runtime="web"] .shell {
 
 .web-settings-content {
   display: grid;
-  gap: 14px;
+  gap: 10px;
 }
