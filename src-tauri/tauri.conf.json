@@ -29,7 +29,7 @@
       }
     ],
     "security": {
-      "capabilities": ["default", "mobile"]
+      "capabilities": ["default"]
     }
   },
   "bundle": {
@@ -40,9 +40,6 @@
     "longDescription": "Undistracted Timer is a minimalist timer for focused work sessions, intentional breaks, and gentle ambient sound.",
     "icon": [
       "../web/assets/favicon.png"
-    ],
-    "android": {
-      "minSdkVersion": 26
-    }
+    ]
   }
 }

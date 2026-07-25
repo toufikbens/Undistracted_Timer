@@ -178,7 +178,6 @@
     syncInputs();
     bindEvents();
     render();
-    syncNativeState();
     setTicking(state.isRunning);
     if (state.isRunning) {
       requestWakeLock();
@@ -188,10 +187,9 @@
   function applyRuntime() {
     const params = new URLSearchParams(window.location.search);
     const isTauri = params.get("runtime") === "tauri" || Boolean(window.__TAURI_INTERNALS__ || window.__TAURI__);
-    const isAndroid = isTauri && /android/i.test(navigator.userAgent);
-    document.documentElement.dataset.runtime = isTauri ? (isAndroid ? "android" : "tauri") : "web";
+    document.documentElement.dataset.runtime = isTauri ? "tauri" : "web";
 
-    if (isTauri && !isAndroid) {
+    if (isTauri) {
       document.querySelector(".traffic-lights")?.remove();
       bindTauriWindowDrag();
     }
@@ -228,22 +226,6 @@
       }
     } catch {
       // The web version has no Tauri window API; this is intentionally a no-op.
-    }
-  }
-
-  function listenAndroidBackButton() {
-    if (document.documentElement.dataset.runtime !== "android") {
-      return;
-    }
-
-    const tauriEvent = window.__TAURI__?.event;
-    if (tauriEvent) {
-      tauriEvent.listen("tauri://back-requested", (event) => {
-        if (!elements.ambientOverlay.hidden) {
-          closeAmbientDialog();
-          event.preventDefault();
-        }
-      });
     }
   }
 
@@ -366,14 +348,10 @@
       });
     }
 
-    listenAndroidBackButton();
-
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) {
         return;
       }
-
-      syncNativeState();
 
       if (!state.isRunning) {
         return;
@@ -607,83 +585,6 @@
     updateNotificationButton();
   }
 
-  function scheduleTimerNotification() {
-    if (!isTauriAndroid()) {
-      return;
-    }
-
-    const bridge = window.TimerBridge;
-    if (!bridge) {
-      return;
-    }
-
-    try {
-      bridge.timerStart(
-        state.endAt,
-        state.currentDuration,
-        modes[state.mode].label,
-        state.mode,
-        Boolean(state.settings.autoStart),
-        durationFor("focus", state.settings),
-        durationFor("short", state.settings),
-        durationFor("long", state.settings),
-        state.settings.longEvery,
-        state.completedInCycle
-      );
-    } catch {
-      // bridge not available
-    }
-  }
-
-  function stopTimerNotification() {
-    if (!isTauriAndroid()) {
-      return;
-    }
-
-    try {
-      window.TimerBridge?.timerStop();
-    } catch {
-      // bridge not available
-    }
-  }
-
-  function syncNativeState() {
-    if (!isTauriAndroid()) {
-      return;
-    }
-
-    try {
-      const raw = window.TimerBridge?.getState?.();
-      if (!raw || raw === "{}") {
-        return;
-      }
-
-      const native = JSON.parse(raw);
-      if (!native.running || !native.endAt || native.totalSecs <= 0) {
-        return;
-      }
-
-      const remaining = Math.max(0, Math.ceil((native.endAt - Date.now()) / 1000));
-      if (remaining <= 0) {
-        return;
-      }
-
-      state.mode = native.mode;
-      state.currentDuration = native.totalSecs;
-      state.remaining = remaining;
-      state.isRunning = true;
-      state.endAt = native.endAt;
-      if (typeof native.completedInCycle === "number") {
-        state.completedInCycle = native.completedInCycle;
-      }
-      setTicking(true);
-      requestWakeLock();
-      render();
-    } catch {
-      // ignore bridge errors
-    }
-  }
-
   function clearAutoStart() {
     if (autoStartHandle !== null) {
       window.clearTimeout(autoStartHandle);
@@ -713,7 +614,6 @@
     state.endAt = Date.now() + state.remaining * 1000;
     setTicking(true);
     requestWakeLock();
-    scheduleTimerNotification();
     saveState();
     render();
   }
@@ -726,7 +626,6 @@
     state.endAt = null;
     setTicking(false);
     releaseWakeLock();
-    stopTimerNotification();
     saveState();
     render();
   }
@@ -740,7 +639,6 @@
     state.remaining = state.currentDuration;
     setTicking(false);
     releaseWakeLock();
-    stopTimerNotification();
     saveState();
     render();
   }
@@ -759,7 +657,6 @@
     state.remaining = state.currentDuration;
     setTicking(false);
     releaseWakeLock();
-    stopTimerNotification();
     saveState();
     render();
   }
@@ -781,11 +678,6 @@
     setTicking(false);
     releaseWakeLock();
 
-    const androidAutoStart = automatic && state.settings.autoStart && isTauriAndroid();
-    if (!androidAutoStart) {
-      stopTimerNotification();
-    }
-
     saveState();
     render();
 
@@ -794,13 +686,7 @@
     }
 
     if (automatic && state.settings.autoStart) {
-      if (isTauriAndroid()) {
-        // The native service will start the next session in the background.
-        // Sync the UI once it has had time to start.
-        window.setTimeout(syncNativeState, 900);
-      } else {
-        autoStartHandle = window.setTimeout(startTimer, 700);
-      }
+      autoStartHandle = window.setTimeout(startTimer, 700);
     }
   }
 
@@ -1334,31 +1220,8 @@
     return Math.min(1, Math.max(0, globalVolume * soundVolume));
   }
 
-  function isTauriAndroid() {
-    return document.documentElement.dataset.runtime === "android";
-  }
-
-  function tauriNotify() {
-    return window.__TAURI__?.core?.invoke;
-  }
-
   // Ask for notification permission and store the user's choice.
   async function requestNotifications() {
-    if (isTauriAndroid()) {
-      try {
-        const invoke = tauriNotify();
-        const permission = await invoke("plugin:notification|request_permission");
-        state.settings.notifications = permission;
-        setTransientStatus(permission ? "Notifications on" : "Notifications off");
-        saveState();
-        updateNotificationButton();
-        return;
-      } catch {
-        setTransientStatus("Notifications off");
-        return;
-      }
-    }
-
     if (!("Notification" in window)) {
       setTransientStatus("Unsupported");
       state.settings.notifications = false;
@@ -1383,14 +1246,6 @@
 
   // Keep the notification button honest about browser support and permission.
   function updateNotificationButton() {
-    if (isTauriAndroid()) {
-      elements.notifyButton.disabled = false;
-      elements.notifyButton.textContent = state.settings.notifications
-        ? "Notifications enabled"
-        : "Enable notifications";
-      return;
-    }
-
     if (!("Notification" in window)) {
       elements.notifyButton.textContent = "Notifications unavailable";
       elements.notifyButton.disabled = true;
@@ -1415,20 +1270,6 @@
     }
 
     if (!state.settings.notifications) {
-      return;
-    }
-
-    if (isTauriAndroid()) {
-      try {
-        const invoke = tauriNotify();
-        invoke("plugin:notification|notify", {
-          title: mode.completeTitle,
-          body: mode.completeMessage,
-          icon: "assets/app-icon.svg"
-        }).catch(function () {});
-      } catch {
-        // silently fail
-      }
       return;
     }
 
