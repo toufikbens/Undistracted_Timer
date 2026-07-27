@@ -1169,6 +1169,33 @@ body.is-running .status-pill {
   }
 }
 
+/* Tablet and below: icon-only buttons */
+@media (max-width: 860px) {
+  .web-only span {
+    font-size: 0;
+  }
+
+  .web-only {
+    min-width: 38px;
+    padding: 0 10px;
+  }
+
+  #webAmbientButton::before {
+    content: "\1f3b5";
+    font-size: 1rem;
+  }
+
+  #webAppearanceButton::before {
+    content: "\1f3a8";
+    font-size: 1rem;
+  }
+
+  #webSettingsButton::before {
+    content: "\2699\fe0f";
+    font-size: 1rem;
+  }
+}
+
 /* Phone layout */
 @media (max-width: 520px) {
   .titlebar {
@@ -1246,6 +1273,23 @@ body.is-running .status-pill {
 
   .theme-button {
     padding-inline: 10px;
+  }
+
+  .web-appearance-window,
+  .web-settings-window {
+    max-height: calc(100svh - 12px);
+    padding: 10px;
+    border-radius: 10px;
+  }
+
+  .web-appearance-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 8px;
+  }
+
+  .web-appearance-header h2,
+  .web-settings-header h2 {
+    font-size: 1rem;
   }
 }
 
@@ -1366,7 +1410,8 @@ html[data-runtime="web"] .shell {
   border: 1px solid var(--border-strong);
   border-radius: 12px;
   background: var(--shell-bg);
-  overflow: visible;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .web-appearance-header {
