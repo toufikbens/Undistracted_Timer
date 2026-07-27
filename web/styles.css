@@ -1412,6 +1412,50 @@ html[data-runtime="web"] .shell {
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
+.web-appearance-option--upload {
+  display: grid;
+  place-items: center;
+  background: var(--surface-soft);
+  border-style: dashed;
+}
+
+.web-appearance-option--upload::after {
+  content: "+";
+  font-size: 2rem;
+  font-weight: 300;
+  color: var(--muted);
+}
+
+.web-appearance-option--custom {
+  position: relative;
+}
+
+.web-appearance-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  border-radius: 50%;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.web-appearance-option--custom:hover .web-appearance-remove {
+  opacity: 1;
+}
+
+.web-appearance-remove:hover {
+  background: var(--danger, #e5484d);
+}
+
 .web-appearance-controls {
   display: grid;
   gap: 12px;

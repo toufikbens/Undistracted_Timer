@@ -89,6 +89,7 @@
       ambientVolume: 42,
       ambientSoundVolumes: {},
       backgroundImage: "none",
+      customImages: [],
       glassOpacity: 72,
       glassBlur: 14
     }
@@ -147,6 +148,7 @@
     webAppearanceOverlay: document.getElementById("webAppearanceOverlay"),
     webAppearanceCloseButton: document.getElementById("webAppearanceCloseButton"),
     webAppearanceGrid: document.getElementById("webAppearanceGrid"),
+    webAppearanceFileInput: document.getElementById("webAppearanceFileInput"),
     webOpacitySlider: document.getElementById("webOpacitySlider"),
     webOpacityValue: document.getElementById("webOpacityValue"),
     webBlurSlider: document.getElementById("webBlurSlider"),
@@ -327,6 +329,9 @@
           closeAppearanceDialog();
         }
       });
+    }
+    if (elements.webAppearanceFileInput) {
+      elements.webAppearanceFileInput.addEventListener("change", handleCustomImageUpload);
     }
     if (elements.webOpacitySlider) {
       elements.webOpacitySlider.addEventListener("input", updateGlassOpacity);
@@ -1654,7 +1659,75 @@
       fragment.appendChild(option);
     });
 
+    const customImages = state.settings.customImages || [];
+    customImages.forEach((dataUrl, index) => {
+      const option = document.createElement("button");
+      option.type = "button";
+      option.className = "web-appearance-option web-appearance-option--custom";
+      option.style.backgroundImage = `url(${dataUrl})`;
+      option.setAttribute("aria-label", `Custom image ${index + 1}`);
+      if (currentBg === dataUrl) {
+        option.classList.add("is-active");
+      }
+      option.addEventListener("click", () => setBackground(dataUrl));
+
+      const removeBtn = document.createElement("span");
+      removeBtn.className = "web-appearance-remove";
+      removeBtn.textContent = "\u00d7";
+      removeBtn.setAttribute("aria-label", `Remove custom image ${index + 1}`);
+      removeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        removeCustomImage(index);
+      });
+      option.appendChild(removeBtn);
+
+      fragment.appendChild(option);
+    });
+
+    const uploadOption = document.createElement("button");
+    uploadOption.type = "button";
+    uploadOption.className = "web-appearance-option web-appearance-option--upload";
+    uploadOption.setAttribute("aria-label", "Upload image");
+    uploadOption.addEventListener("click", () => elements.webAppearanceFileInput.click());
+    fragment.appendChild(uploadOption);
+
     elements.webAppearanceGrid.replaceChildren(fragment);
+  }
+
+  function removeCustomImage(index) {
+    const customImages = state.settings.customImages || [];
+    const removed = customImages.splice(index, 1)[0];
+    if (state.settings.backgroundImage === removed) {
+      state.settings.backgroundImage = "none";
+    }
+    saveState();
+    applyBackground();
+    renderAppearanceGrid();
+  }
+
+  function handleCustomImageUpload() {
+    const files = elements.webAppearanceFileInput.files;
+    if (!files || files.length === 0) return;
+
+    const customImages = state.settings.customImages || [];
+    let added = 0;
+
+    Array.from(files).forEach((file) => {
+      if (!file.type.startsWith("image/")) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        customImages.push(reader.result);
+        state.settings.customImages = customImages;
+        added++;
+        if (added === files.length) {
+          saveState();
+          renderAppearanceGrid();
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    elements.webAppearanceFileInput.value = "";
   }
 
   function setBackground(imagePath) {
