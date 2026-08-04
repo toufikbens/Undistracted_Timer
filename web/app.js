@@ -1616,19 +1616,19 @@
     if (!elements.webAppearanceGrid) return;
 
     const images = [
-      "1851182.jpg",
-      "piqsels.com-id-scjko.jpg",
-      "piqsels.com-id-sqfso.jpg",
-      "wallhaven-28y6lg_3840x2160.png",
-      "wallhaven-9m1358_3840x2160.png",
-      "wallhaven-eo8evl_3840x2160.png",
-      "wallhaven-eovv3r_3840x2160.png",
-      "wallhaven-gjk3xq_3840x2160.png",
-      "wallhaven-n6dr1l_3840x2160.png",
-      "wallhaven-n6pjmx_3840x2160.png",
-      "wallhaven-nkd1ed_3840x2160.png",
-      "wallhaven-p8816j_3840x2160.png",
-      "wallhaven-q66kx5_3840x2160.png"
+      "1851182.webp",
+      "piqsels.com-id-scjko.webp",
+      "piqsels.com-id-sqfso.webp",
+      "wallhaven-28y6lg_3840x2160.webp",
+      "wallhaven-9m1358_3840x2160.webp",
+      "wallhaven-eo8evl_3840x2160.webp",
+      "wallhaven-eovv3r_3840x2160.webp",
+      "wallhaven-gjk3xq_3840x2160.webp",
+      "wallhaven-n6dr1l_3840x2160.webp",
+      "wallhaven-n6pjmx_3840x2160.webp",
+      "wallhaven-nkd1ed_3840x2160.webp",
+      "wallhaven-p8816j_3840x2160.webp",
+      "wallhaven-q66kx5_3840x2160.webp"
     ];
 
     const fragment = document.createDocumentFragment();
