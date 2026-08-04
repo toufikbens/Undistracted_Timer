@@ -1281,8 +1281,8 @@
     if ("Notification" in window && Notification.permission === "granted") {
       new Notification(mode.completeTitle, {
         body: mode.completeMessage,
-        icon: "assets/app-icon.svg",
-        badge: "assets/app-icon.svg"
+        icon: "assets/app-icon.png",
+        badge: "assets/app-icon.png"
       });
     }
   }
