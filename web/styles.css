@@ -155,15 +155,6 @@ html[data-runtime="tauri"] .brand {
   gap: 9px;
 }
 
-html[data-runtime="tauri"] .brand-mark {
-  width: 32px;
-  height: 32px;
-  padding: 5px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.08);
-}
-
 html[data-runtime="tauri"] .brand > div {
   display: flex;
   align-items: center;
@@ -251,12 +242,6 @@ html[data-runtime="tauri"] h1 {
 
 .brand > div {
   min-width: 0;
-}
-
-.brand-mark {
-  width: 34px;
-  height: 34px;
-  flex: 0 0 auto;
 }
 
 .eyebrow,
@@ -951,11 +936,6 @@ body.is-running .status-pill {
     gap: 10px;
   }
 
-  .brand-mark {
-    width: 30px;
-    height: 30px;
-  }
-
   h1 {
     font-size: 1rem;
   }
@@ -1201,10 +1181,6 @@ body.is-running .status-pill {
   .titlebar {
     gap: 12px;
     padding: 16px;
-  }
-
-  .brand-mark {
-    display: none;
   }
 
   .status-pill {
