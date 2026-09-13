@@ -60,6 +60,12 @@
       tone: "Gentle keys",
       categories: ["focus", "calm"],
       src: "assets/piano1.mp3"
+    },
+    fireplace: {
+      label: "Fireplace",
+      tone: "Warm crackle",
+      categories: ["focus", "calm"],
+      src: "assets/Fireplace.mp3"
     }
   };
 
