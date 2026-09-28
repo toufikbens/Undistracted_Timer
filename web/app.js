@@ -105,6 +105,10 @@
   let ambientState = {
     tracks: {}
   };
+  // render() runs every second; the library DOM must only be rebuilt when the
+  // selection actually changes, otherwise focus is lost and volume sliders are
+  // destroyed mid-drag.
+  let ambientLibrarySignature = null;
 
   // Cache DOM lookups once, then reuse these references throughout the app.
   const elements = {
@@ -517,9 +521,16 @@
     targetState.settings.ambientSound = targetState.settings.ambientSounds[0] || "off";
   }
 
-  // Persist the full app state after each meaningful change.
+  // Persist the full app state after each meaningful change. Callers run
+  // render() immediately after, so a storage failure (private browsing,
+  // quota exceeded, storage disabled) must never throw — otherwise the UI
+  // freezes on stale values. The app keeps working in memory.
   function saveState() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (error) {
+      console.warn("Could not save state to localStorage:", error);
+    }
   }
 
   // Daily stats reset automatically when the calendar day changes.
@@ -1461,6 +1472,14 @@
   }
 
   function renderAmbientLibrary(selectedSoundKeys) {
+    // The library content depends only on the selection; per-sound volumes are
+    // updated in place by their own handlers.
+    const signature = selectedSoundKeys.join(",");
+    if (signature === ambientLibrarySignature && elements.ambientLibrary.children.length > 0) {
+      return;
+    }
+    ambientLibrarySignature = signature;
+
     const fragment = document.createDocumentFragment();
 
     Object.entries(ambientSounds)
@@ -1677,12 +1696,14 @@
       fragment.appendChild(option);
     });
 
-    const uploadOption = document.createElement("button");
-    uploadOption.type = "button";
-    uploadOption.className = "web-appearance-option web-appearance-option--upload";
-    uploadOption.setAttribute("aria-label", "Upload image");
-    uploadOption.addEventListener("click", () => elements.webAppearanceFileInput.click());
-    fragment.appendChild(uploadOption);
+    if ((state.settings.customImages || []).length < CUSTOM_IMAGE_MAX_COUNT) {
+      const uploadOption = document.createElement("button");
+      uploadOption.type = "button";
+      uploadOption.className = "web-appearance-option web-appearance-option--upload";
+      uploadOption.setAttribute("aria-label", "Upload image");
+      uploadOption.addEventListener("click", () => elements.webAppearanceFileInput.click());
+      fragment.appendChild(uploadOption);
+    }
 
     elements.webAppearanceGrid.replaceChildren(fragment);
   }
@@ -1698,29 +1719,58 @@
     renderAppearanceGrid();
   }
 
+  // Custom uploads are stored as base64 data URLs inside the saved state, so
+  // they are downscaled and re-encoded on import to keep memory and
+  // localStorage usage small.
+  const CUSTOM_IMAGE_MAX_COUNT = 10;
+  const CUSTOM_IMAGE_MAX_EDGE = 1920;
+  const CUSTOM_IMAGE_QUALITY = 0.82;
+
   function handleCustomImageUpload() {
     const files = elements.webAppearanceFileInput.files;
+    elements.webAppearanceFileInput.value = "";
     if (!files || files.length === 0) return;
 
+    const imageFiles = Array.from(files).filter((file) => file.type.startsWith("image/"));
     const customImages = state.settings.customImages || [];
-    let added = 0;
+    const room = CUSTOM_IMAGE_MAX_COUNT - customImages.length;
+    if (imageFiles.length === 0 || room <= 0) {
+      setTransientStatus(`Up to ${CUSTOM_IMAGE_MAX_COUNT} custom images`);
+      return;
+    }
 
-    Array.from(files).forEach((file) => {
-      if (!file.type.startsWith("image/")) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        customImages.push(reader.result);
-        state.settings.customImages = customImages;
-        added++;
-        if (added === files.length) {
-          saveState();
-          renderAppearanceGrid();
-        }
-      };
-      reader.readAsDataURL(file);
+    Promise.all(imageFiles.slice(0, room).map(compressCustomImage)).then((results) => {
+      const added = results.filter((entry) => entry !== null);
+      if (added.length === 0) return;
+      state.settings.customImages = customImages.concat(added);
+      saveState();
+      renderAppearanceGrid();
     });
+  }
 
-    elements.webAppearanceFileInput.value = "";
+  // Decode the chosen file, scale it down to a background-sized image, and
+  // encode it as WebP (~95% smaller than the original photo).
+  function compressCustomImage(file) {
+    return new Promise((resolve) => {
+      const url = URL.createObjectURL(file);
+      const image = new Image();
+      image.onload = () => {
+        URL.revokeObjectURL(url);
+        const scale = Math.min(1, CUSTOM_IMAGE_MAX_EDGE / Math.max(image.width, image.height));
+        const width = Math.max(1, Math.round(image.width * scale));
+        const height = Math.max(1, Math.round(image.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(image, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/webp", CUSTOM_IMAGE_QUALITY));
+      };
+      image.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(null);
+      };
+      image.src = url;
+    });
   }
 
   function setBackground(imagePath) {
