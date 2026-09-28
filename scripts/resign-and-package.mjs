@@ -5,10 +5,18 @@ import { join } from "path";
 const ROOT = new URL("..", import.meta.url).pathname;
 const APP_NAME = "Undistracted Timer";
 const VERSION = "0.1.0";
-const UNIVERSAL_DIR = join(ROOT, "src-tauri/target/universal-apple-darwin/release");
-const APP_PATH = join(UNIVERSAL_DIR, `bundle/macos/${APP_NAME}.app`);
-const DMG_DIR = join(UNIVERSAL_DIR, "bundle/dmg");
-const DMG_NAME = `${APP_NAME}_${VERSION}_universal.dmg`;
+// Optional first argument: a Tauri build target (defaults to universal).
+// Example: node scripts/resign-and-package.mjs aarch64-apple-darwin
+const TARGET = process.argv[2] || "universal-apple-darwin";
+const ARCH_SUFFIX = TARGET === "universal-apple-darwin"
+  ? "universal"
+  : TARGET.includes("aarch64")
+    ? "arm64"
+    : TARGET;
+const RELEASE_DIR = join(ROOT, "src-tauri/target", TARGET, "release");
+const APP_PATH = join(RELEASE_DIR, `bundle/macos/${APP_NAME}.app`);
+const DMG_DIR = join(RELEASE_DIR, "bundle/dmg");
+const DMG_NAME = `${APP_NAME}_${VERSION}_${ARCH_SUFFIX}.dmg`;
 const DIST_DIR = join(ROOT, "dist");
 const STAGING = "/tmp/undistracted-dmg-staging";
 

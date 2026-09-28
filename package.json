@@ -10,7 +10,9 @@
     "web:serve": "python3 -m http.server 5173 --directory web",
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build --target universal-apple-darwin",
+    "desktop:build:silicon": "tauri build --target aarch64-apple-darwin",
     "desktop:release": "tauri build --target universal-apple-darwin && node scripts/resign-and-package.mjs",
+    "desktop:release:silicon": "tauri build --target aarch64-apple-darwin && node scripts/resign-and-package.mjs aarch64-apple-darwin",
     "tauri": "tauri"
   },
   "devDependencies": {
