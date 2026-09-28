@@ -15,7 +15,7 @@ Desktop (browser):
 
 Mobile:
 
-![Undistracted Timer on a phone](web/assets/pomodoro_phone.png)
+<img src="web/assets/pomodoro_phone.png" alt="Undistracted Timer on a phone" width="260">
 
 ## Features
 
