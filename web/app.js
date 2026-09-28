@@ -1042,9 +1042,9 @@
   }
 
   function createAmbientTrack(soundKey, src) {
-    return {
+    const track = {
       soundKey,
-      players: [createAmbientPlayer(src), createAmbientPlayer(src)],
+      players: [],
       activeIndex: 0,
       lastStartTime: 0,
       loopHandle: null,
@@ -1052,8 +1052,28 @@
       isPlaying: false,
       isPending: false,
       isCrossfading: false,
+      crossfadeRetryAt: 0,
       playToken: 0
     };
+    track.players = [createAmbientPlayer(src), createAmbientPlayer(src)];
+    track.players.forEach((player) => {
+      player.addEventListener("ended", () => recoverAmbientTrack(track, player));
+    });
+    return track;
+  }
+
+  // Safety net: the crossfade is scheduled by a polled interval that browsers
+  // throttle hard in background tabs. If the window is missed the active
+  // player reaches the end of the file and playback would fall into silence,
+  // so switch to the other player the moment "ended" fires.
+  function recoverAmbientTrack(track, player) {
+    if (!track.isPlaying || track.isCrossfading) {
+      return;
+    }
+    if (track.players[track.activeIndex] !== player) {
+      return;
+    }
+    crossfadeAmbientPlayers(track, 1.2);
   }
 
   function createAmbientPlayer(src) {
@@ -1071,6 +1091,11 @@
 
   function checkAmbientLoop(track) {
     if (!track.isPlaying || track.isCrossfading) {
+      return;
+    }
+    // After a failed crossfade, pause retry attempts briefly instead of
+    // hammering play() on every 120ms tick.
+    if (window.performance.now() < track.crossfadeRetryAt) {
       return;
     }
 
@@ -1114,7 +1139,12 @@
         return;
       }
     } catch {
+      // Fall back to a crude native loop so audio never goes silent while a
+      // retry is scheduled. Setting loop on an already-ended element does
+      // nothing, so also kick playback back to life.
       fromPlayer.loop = true;
+      fromPlayer.play().catch(() => {});
+      track.crossfadeRetryAt = window.performance.now() + 1500;
       track.isCrossfading = false;
       return;
     }
