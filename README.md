@@ -9,7 +9,13 @@ The shared web app lives in `web/`. The macOS desktop wrapper lives in
 
 ## Preview
 
-![Undistracted Timer icon](web/assets/app-icon.png)
+Desktop (browser):
+
+![Undistracted Timer in the browser](web/assets/pomodoro_browser.png)
+
+Mobile:
+
+![Undistracted Timer on a phone](web/assets/pomodoro_phone.png)
 
 ## Features
 
