@@ -9,7 +9,7 @@ The shared web app lives in `web/`. The macOS desktop wrapper lives in
 
 ## Preview
 
-![Undistracted Timer screenshot](web/assets/undistracted-timer.png)
+![Undistracted Timer icon](web/assets/app-icon.png)
 
 ## Features
 
@@ -21,7 +21,6 @@ The shared web app lives in `web/`. The macOS desktop wrapper lives in
 - Optional completion chime (synthesized via Web Audio API) and browser
   notifications
 - Today's focus session and minute counters
-- Dark and light themes
 - Screen wake lock while the timer is running
 - Keyboard shortcuts: Space starts/pauses, R resets, S skips, 1/2/3 switch
   modes

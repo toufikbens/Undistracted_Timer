@@ -11,21 +11,18 @@
     focus: {
       label: "Focus",
       durationKey: "focusMinutes",
-      nextLabel: "short break",
       completeTitle: "Focus complete",
       completeMessage: "Time for a break."
     },
     short: {
       label: "Short break",
       durationKey: "shortMinutes",
-      nextLabel: "focus",
       completeTitle: "Break complete",
       completeMessage: "Ready for another focus session."
     },
     long: {
       label: "Long break",
       durationKey: "longMinutes",
-      nextLabel: "focus",
       completeTitle: "Long break complete",
       completeMessage: "Come back gently."
     }
@@ -34,37 +31,31 @@
   const ambientSounds = {
     off: {
       label: "Off",
-      tone: "Silence",
-      categories: ["focus", "calm"]
+      tone: "Silence"
     },
     lightRain: {
       label: "Light rain",
       tone: "Soft rain",
-      categories: ["focus", "calm"],
       src: "assets/Light rain 1.mp3"
     },
     heavyRain: {
       label: "Heavy rain",
       tone: "Dense rain",
-      categories: ["focus"],
       src: "assets/Heavy rain 1.mp3"
     },
     epicStorm: {
       label: "Epic storm",
       tone: "Rolling storm",
-      categories: ["focus", "calm"],
       src: "assets/Epic-storm.mp3"
     },
     piano: {
       label: "Piano",
       tone: "Gentle keys",
-      categories: ["focus", "calm"],
       src: "assets/piano1.mp3"
     },
     fireplace: {
       label: "Fireplace",
       tone: "Warm crackle",
-      categories: ["focus", "calm"],
       src: "assets/Fireplace.mp3"
     }
   };
@@ -89,7 +80,6 @@
       autoStart: true,
       sound: true,
       notifications: false,
-      theme: "dark",
       ambientSound: "off",
       ambientSounds: [],
       ambientVolume: 42,
@@ -148,7 +138,6 @@
     ambientVolume: document.getElementById("ambientVolume"),
     ambientVolumeValue: document.getElementById("ambientVolumeValue"),
     notifyButton: document.getElementById("notifyButton"),
-    themeColorMeta: document.querySelector('meta[name="theme-color"]'),
     webAmbientButton: document.getElementById("webAmbientButton"),
     webAppearanceButton: document.getElementById("webAppearanceButton"),
     webAppearanceOverlay: document.getElementById("webAppearanceOverlay"),
@@ -181,7 +170,6 @@
     applyRuntime();
     rollTodayIfNeeded();
     restoreRunningTimer();
-    document.documentElement.dataset.theme = "dark";
     applyBackground();
     syncInputs();
     bindEvents();
@@ -457,7 +445,6 @@
     nextState.completedInCycle = boundedInteger(nextState.completedInCycle, 0, nextState.settings.longEvery - 1, 0);
     nextState.todayFocusSessions = boundedInteger(nextState.todayFocusSessions, 0, 10000, 0);
     nextState.todayFocusMinutes = boundedInteger(nextState.todayFocusMinutes, 0, 100000, 0);
-    nextState.settings.theme = "dark";
     const savedAmbientSounds = Array.isArray(nextState.settings.ambientSounds)
       ? nextState.settings.ambientSounds
       : [];

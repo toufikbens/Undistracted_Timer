@@ -7,11 +7,10 @@ edition = "2021"
 
 [lib]
 name = "undistracted_timer_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
-tauri-plugin-notification = "2"

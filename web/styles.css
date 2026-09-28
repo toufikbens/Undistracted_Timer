@@ -2,8 +2,6 @@
 :root {
   color-scheme: dark;
   --bg: #08090c;
-  --surface: #101217;
-  --surface-strong: #151922;
   --surface-soft: #1b202a;
   --border: rgba(255, 255, 255, 0.09);
   --border-strong: rgba(255, 255, 255, 0.15);
@@ -108,8 +106,6 @@ html[data-runtime="tauri"] {
   --titlebar-bg: #0e1016;
   --side-bg: #0e1016;
   --panel-bg: #151922;
-  --surface: #151922;
-  --surface-strong: #1b202a;
   --surface-soft: rgba(255, 255, 255, 0.06);
   --mode-bg: rgba(255, 255, 255, 0.04);
   --control-bg: rgba(255, 255, 255, 0.06);
@@ -1250,23 +1246,6 @@ body.is-running .status-pill {
   .theme-button {
     padding-inline: 10px;
   }
-
-  .web-appearance-window,
-  .web-settings-window {
-    max-height: calc(100svh - 12px);
-    padding: 10px;
-    border-radius: 10px;
-  }
-
-  .web-appearance-grid {
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 8px;
-  }
-
-  .web-appearance-header h2,
-  .web-settings-header h2 {
-    font-size: 1rem;
-  }
 }
 
 /* Tauri keeps a fixed glass window; scroll the stacked content inside it. */
@@ -1353,7 +1332,6 @@ html[data-runtime="web"] body::before {
 }
 
 html[data-runtime="web"] .titlebar,
-html[data-runtime="web"] .web-top-panel,
 html[data-runtime="web"] .shell {
   background: rgba(16, 18, 23, var(--web-surface-alpha));
   backdrop-filter: blur(var(--web-glass-blur)) saturate(140%);
@@ -1543,4 +1521,24 @@ html[data-runtime="web"] .shell {
 .web-settings-content {
   display: grid;
   gap: 10px;
+}
+
+/* Phone (<=360px): tighter dialogs — must follow base dialog rules to win. */
+@media (max-width: 360px) {
+  .web-appearance-window,
+  .web-settings-window {
+    max-height: calc(100svh - 12px);
+    padding: 10px;
+    border-radius: 10px;
+  }
+
+  .web-appearance-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 8px;
+  }
+
+  .web-appearance-header h2,
+  .web-settings-header h2 {
+    font-size: 1rem;
+  }
 }
